@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#00d9ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+  <title>Quorum mark — three agents forming a quorum</title>
+  <circle cx="32" cy="10" r="5" fill="#0a0e14"/>
+  <circle cx="10" cy="48" r="5" fill="#0a0e14"/>
+  <circle cx="54" cy="48" r="5" fill="#0a0e14"/>
+  <line x1="32" y1="15" x2="10" y2="43"/>
+  <line x1="32" y1="15" x2="54" y2="43"/>
+  <line x1="15" y1="48" x2="49" y2="48"/>
+</svg>

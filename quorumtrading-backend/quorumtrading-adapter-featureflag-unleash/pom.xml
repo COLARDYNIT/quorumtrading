@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.quorumtrading</groupId>
+        <artifactId>quorumtrading-backend-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>quorumtrading-adapter-featureflag-unleash</artifactId>
+    <packaging>jar</packaging>
+
+    <name>QuorumTrading Backend - Adapter FeatureFlag Unleash</name>
+    <description>
+        Feature flag evaluation via the Unleash SDK, reading toggle definitions from this
+        application's own database instead of an Unleash server.
+    </description>
+
+    <dependencies>
+        <!-- Internal modules -->
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-model</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-application</artifactId>
+        </dependency>
+
+        <!--
+            Unleash SDK, deliberately pinned to the 8.x line.
+
+            From 9.0.0 onward the client delegates evaluation to yggdrasil-engine, a Rust core
+            loaded through JNA from a bundled .so/.dylib. This application ships as a GraalVM
+            native binary (see -Pnative and the *IT native smoke tests), and JNA in a native image
+            needs JNI configuration and extracted-resource handling that buys us nothing here:
+            8.4.0 is pure Java and evaluates the same strategies, constraints and context.
+
+            Consequence to keep in mind: 8.x receives no upstream updates. If a strategy type we
+            need only exists in 9+, revisit this together with the native build.
+        -->
+        <dependency>
+            <groupId>io.getunleash</groupId>
+            <artifactId>unleash-client-java</artifactId>
+            <version>8.4.0</version>
+        </dependency>
+
+        <!-- Quarkus -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.jboss.logging</groupId>
+            <artifactId>jboss-logging</artifactId>
+        </dependency>
+
+        <!-- Test dependencies (pure Mockito unit tests — no CDI boot, no DB) -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5-mockito</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>io.smallrye</groupId>
+                <artifactId>jandex-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>make-index</id>
+                        <goals>
+                            <goal>jandex</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

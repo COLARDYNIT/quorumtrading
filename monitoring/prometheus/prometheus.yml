@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Scrape QuorumTrading backend running on host
+  - job_name: 'quorumtrading-backend'
+    metrics_path: '/q/metrics'
+    static_configs:
+      # host.docker.internal allows container to reach host machine
+      - targets: ['host.docker.internal:8080']
+        labels:
+          application: 'quorumtrading'
+          environment: 'dev'
+    # Handle connection refused gracefully when backend is not running
+    scrape_timeout: 5s
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

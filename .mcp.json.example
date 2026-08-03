@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "quorumtrading": {
+      "type": "http",
+      "url": "http://localhost:8085/mcp",
+      "headers": {
+        "Authorization": "Bearer REPLACE_WITH_TOKEN_FROM_LOGS"
+      }
+    }
+  }
+}

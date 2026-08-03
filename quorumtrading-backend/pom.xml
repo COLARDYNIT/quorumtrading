@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.quorumtrading</groupId>
+    <artifactId>quorumtrading-backend-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>QuorumTrading Backend - Parent</name>
+
+    <modules>
+        <module>quorumtrading-model</module>
+        <module>quorumtrading-application</module>
+        <module>quorumtrading-adapter-persistence</module>
+        <module>quorumtrading-adapter-llm-openrouter</module>
+        <module>quorumtrading-adapter-llm-local</module>
+        <module>quorumtrading-adapter-llm-router</module>
+        <module>quorumtrading-adapter-marketdata-reddit</module>
+        <module>quorumtrading-adapter-marketdata-finnhub</module>
+        <module>quorumtrading-adapter-broker-mock</module>
+        <module>quorumtrading-adapter-broker-alpaca</module>
+        <module>quorumtrading-adapter-broker-saxo</module>
+        <module>quorumtrading-adapter-marketdata-alpaca</module>
+        <module>quorumtrading-adapter-marketdata-tiingo</module>
+        <module>quorumtrading-adapter-marketdata-saxo</module>
+        <module>quorumtrading-adapter-marketdata-kraken</module>
+        <module>quorumtrading-adapter-marketdata-coinbase</module>
+        <module>quorumtrading-adapter-rest</module>
+        <module>quorumtrading-adapter-mcp</module>
+        <module>quorumtrading-adapter-websocket</module>
+        <module>quorumtrading-adapter-redis</module>
+        <module>quorumtrading-adapter-payment-stripe</module>
+        <module>quorumtrading-adapter-featureflag-unleash</module>
+        <module>quorumtrading-bootstrap</module>
+        <module>quorumtrading-adapter-marketdata-rss</module>
+        <!-- Last: aggregates every module's coverage into one honest number. -->
+        <module>quorumtrading-coverage</module>
+    </modules>
+
+    <properties>
+        <java.version>25</java.version>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
+        <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+        <quarkus.platform.version>3.37.4</quarkus.platform.version>
+
+        <jandex.version>3.6.0</jandex.version>
+        <wiremock.version>3.13.2</wiremock.version>
+        <assertj.version>3.27.7</assertj.version>
+
+        <compiler-plugin.version>3.15.0</compiler-plugin.version>
+        <surefire-plugin.version>3.5.6</surefire-plugin.version>
+
+        <!-- Set to false only to regenerate pmd-baseline.properties; see the maven-pmd-plugin
+             configuration below and scripts/generate-pmd-baseline.sh. -->
+        <pmd.failOnViolation>true</pmd.failOnViolation>
+
+        <!-- Overridable via -Dsurefire.excludedGroups=reddit,llm to include prompt-engineering tests.
+             "external" gates tests that perform live HTTP against third-party services (RSS feeds, Finnhub). -->
+        <surefire.excludedGroups>reddit,llm,prompt-engineering,prompt-engineering-expensive,external</surefire.excludedGroups>
+
+        <!-- Skips SUREFIRE ONLY, leaving failsafe (the *IT native smoke tests) to run. It is wired
+             into the surefire plugin's own <configuration> below, so it cannot leak into failsafe
+             the way -DskipTests does — that one skips both plugins and would silently turn the
+             production deploy's smoke step into a no-op.
+
+             The production deploy (quorumtrading-infra, deploy-backend.yml) runs
+                 ./mvnw clean verify -Pnative -DskipUnitTests=true
+             because the app repo's CI has already run the unit tests for that exact commit and the
+             deploy asserts that rather than repeating it — on a different JDK, which is how the
+             two pipelines came to disagree in the first place. -->
+        <skipUnitTests>false</skipUnitTests>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Quarkus BOM -->
+            <dependency>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>${quarkus.platform.artifact-id}</artifactId>
+                <version>${quarkus.platform.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Internal modules -->
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-model</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-application</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-rest</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-persistence</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-websocket</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-redis</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-llm-openrouter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-llm-local</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-llm-router</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-marketdata-finnhub</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-marketdata-reddit</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-marketdata-rss</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-broker-mock</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-broker-alpaca</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-broker-saxo</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-marketdata-alpaca</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-marketdata-tiingo</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-marketdata-saxo</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-marketdata-kraken</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-marketdata-coinbase</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-mcp</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-payment-stripe</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.quorumtrading</groupId>
+                <artifactId>quorumtrading-adapter-featureflag-unleash</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Test dependencies -->
+            <dependency>
+                <groupId>org.wiremock</groupId>
+                <artifactId>wiremock</artifactId>
+                <version>${wiremock.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>${assertj.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${compiler-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${surefire-plugin.version}</version>
+                    <configuration>
+                        <!-- Exclude Reddit adapter tests by default (they call external APIs and are slow) -->
+                        <!-- To run Reddit tests: ./mvnw test -pl quorumtrading-adapter-marketdata-reddit -DexcludedGroups="" -->
+                        <excludedGroups>${surefire.excludedGroups}</excludedGroups>
+                        <!-- See the skipUnitTests property: this is the knob that lets the deploy
+                             run the integration tests WITHOUT re-running the unit suite. -->
+                        <skipTests>${skipUnitTests}</skipTests>
+                    </configuration>
+                </plugin>
+                <!-- Runs the *IT classes against the packaged artifact. Only quorumtrading-bootstrap
+                     has any, and only it declares an execution; the version is pinned here so the
+                     two plugins can never drift apart. -->
+                <plugin>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>${surefire-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>${quarkus.platform.group-id}</groupId>
+                    <artifactId>quarkus-maven-plugin</artifactId>
+                    <version>${quarkus.platform.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>io.smallrye</groupId>
+                    <artifactId>jandex-maven-plugin</artifactId>
+                    <version>${jandex.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>0.8.15</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <!-- Coverage measurement on every test run; the coverage GATE (check goal) lives only in
+                 the core-domain modules (model, application) per the test-diamond principle. -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+              Java smell gate. Bound to verify so it runs in the same command CI already uses.
+
+              failOnViolation is true, but every violation that exists today is listed in
+              pmd-baseline.properties, so the build is green on arrival and only NEW violations
+              break it. That file is a freeze list, exactly like the ones in
+              HexagonalArchitectureTest: it is meant to shrink, and an entry added to make a
+              build pass is the one change that defeats the gate.
+
+              Regenerate the baseline (after fixing violations, never to hide them) with:
+                  ./mvnw pmd:pmd -DskipTests && ../scripts/generate-pmd-baseline.sh
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <version>3.27.0</version>
+                <configuration>
+                    <rulesets>
+                        <ruleset>${maven.multiModuleProjectDirectory}/pmd-ruleset.xml</ruleset>
+                    </rulesets>
+                    <excludeFromFailureFile>${maven.multiModuleProjectDirectory}/pmd-baseline.properties</excludeFromFailureFile>
+                    <!-- Property-driven so the baseline can be regenerated with
+                         -Dpmd.failOnViolation=false. An explicit literal here would win over the
+                         command line and make the reports impossible to produce. -->
+                    <failOnViolation>${pmd.failOnViolation}</failOnViolation>
+                    <printFailingErrors>true</printFailingErrors>
+                    <includeTests>false</includeTests>
+                    <!-- MapStruct writes DtoMapperImpl and friends into generated-sources. Gating
+                         code nobody wrote fails the build on the code generator's style. -->
+                    <excludeRoots>
+                        <excludeRoot>${project.build.directory}/generated-sources</excludeRoot>
+                    </excludeRoots>
+                    <!-- No <targetJdk>: 3.27.0 validates it against a fixed list that stops short
+                         of 25 and fails the build outright. Left unset, PMD takes the language
+                         level from maven.compiler.release and parses Java 25 with no errors. -->
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>pmd-check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -1,0 +1,186 @@
+# QuorumTrading — local self-host edition (single user).
+#
+#   docker compose -f docker-compose.local.yml up --build          # full stack: UI + API + MCP
+#   docker compose -f docker-compose.local.yml up --build backend   # headless (expert): API + MCP only
+#
+# The default command boots the whole thing: PostgreSQL + Redis + the backend (REST + MCP server) +
+# the Next.js web UI on http://localhost:3000. On first boot the backend auto-provisions a local
+# owner + MCP token and prints a copy-paste `claude mcp add` banner — watch the logs:
+#   docker compose -f docker-compose.local.yml logs -f backend
+#
+# Expert / agent-only users who don't want the web UI can name the `backend` service explicitly
+# (its depends_on pulls in postgres + redis); the frontend service is then left out.
+#
+# Self-contained: a distinct compose PROJECT (name: below) plus distinct container names + volumes
+# from docker-compose.yml. The explicit project name matters: without it both files share the
+# directory-derived project and their equally-named `postgres`/`redis` services replace each other —
+# `up` on this file would silently remove a running dev-stack postgres.
+# Copy .env.local.example to .env and fill in keys when ready. Note: the built-in mock broker only
+# EXECUTES trades — it does not supply prices. CRYPTO prices are keyless out of the box (built-in
+# Kraken/Coinbase feed); STOCK backfill/backtests need a market-data key (Alpaca). See LOCAL_SETUP.md
+# § "Get price data".
+
+name: quorumtrading-local
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: qt-local-postgres
+    environment:
+      POSTGRES_DB: quorumtrading
+      POSTGRES_USER: quorumtrading
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev-password}
+    volumes:
+      - qt_local_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quorumtrading"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: qt-local-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - qt_local_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./quorumtrading-backend
+      dockerfile: quorumtrading-bootstrap/src/main/docker/Dockerfile.jvm
+      args:
+        # Ship Swagger UI at /q/swagger-ui in the self-host image. This is a build-time Quarkus
+        # setting, so it cannot be flipped later with an env var. Safe here: the standalone edition
+        # is single-user on localhost. The hosted SaaS build leaves it off.
+        INCLUDE_SWAGGER_UI: "true"
+    container_name: qt-local-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # Reach LLM servers running on the HOST (Ollama :11434, LM Studio :1234, any OpenAI-compatible
+    # endpoint) at http://host.docker.internal:<port>. Docker Desktop provides this name already;
+    # this mapping adds it on Linux too, so the keyless "local LLM of choice" path works everywhere.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # The JRE image has no curl; probe /q/health/ready over bash's /dev/tcp instead.
+    # `docker compose up -d --wait` blocks until this passes.
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8085 && printf 'GET /q/health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -q 200"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    environment:
+      # Profile = local (dev-login on, OIDC off). Env vars below override the profile's datasource.
+      QUARKUS_PROFILE: local
+      QUARKUS_HTTP_HOST: 0.0.0.0
+      QUARKUS_HTTP_PORT: "8085"
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/quorumtrading
+      QUARKUS_DATASOURCE_USERNAME: quorumtrading
+      QUARKUS_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-dev-password}
+      QUARKUS_REDIS_HOSTS: redis://redis:6379
+      # Whether a web UI is part of this stack. Default true (the `frontend` service below runs);
+      # backend-rendered pages (e.g. the Saxo onboarding success page) then link to it. Set false
+      # for a headless/agent-only run so those pages point the user back to their MCP agent instead.
+      QT_FRONTEND_ENABLED: ${QT_FRONTEND_ENABLED:-true}
+      # The web UI runs on :3000 in this stack. The %local profile otherwise defaults the frontend
+      # URLs to :3001 (native start-local.sh), which would send the dev-login redirect and the LLM
+      # setup "back to app" link to a dead port. Point them at the container's published :3000.
+      # Drives quorumtrading.auth.frontend-callback-url + quorumtrading.frontend.base-url.
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      # Edition descriptor (GET /api/v1/instance). The local profile already defaults this to
+      # "standalone"; set explicitly so the choice survives profile tweaks.
+      QT_EDITION: ${QT_EDITION:-standalone}
+      # Auto-provision the local owner + MCP token, print the banner on boot.
+      LOCAL_AUTO_PROVISION: "true"
+      LOCAL_MCP_TOKEN_FILE: /work/.qt-local/mcp-token
+      LOCAL_MCP_URL: http://localhost:8085/mcp
+      # Encryption of any stored broker credentials. Generate your own: openssl rand -hex 32
+      BROKER_CREDENTIALS_ENCRYPTION_KEY: ${BROKER_CREDENTIALS_ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+      # LLM engine: chosen at runtime on http://localhost:8085/api/v1/llm/setup (or via the
+      # choose_llm_provider MCP tool) — no restart needed. Note: this container has no `claude`
+      # binary, so the LOCAL option — which shells out to the CLI — only works when the backend runs
+      # natively on the host. In Docker you have two ways to use it anyway: choose OPENROUTER (key
+      # pasted on the setup page, stored encrypted), or run tools/claude-openai-bridge on the host
+      # and point the LOCAL_HTTP engine below at it. A subprocess cannot cross the container
+      # boundary; HTTP can.
+      QT_LLM_SELECTION_ENABLED: ${QT_LLM_SELECTION_ENABLED:-true}
+      QT_LLM_LOCAL_ENABLED: ${QT_LLM_LOCAL_ENABLED:-true}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-not-configured}
+      # Local OpenAI-compatible LLM server on the HOST (Ollama :11434, LM Studio :1234, … — free &
+      # keyless; or tools/claude-openai-bridge :8088, which is neither: it spends your Claude
+      # subscription). On by default here; reached via host.docker.internal (see extra_hosts above).
+      # Change the URL for a different host/port; pin a model with _MODEL, else the server's first
+      # is used. For the bridge: URL http://host.docker.internal:8088/v1, _MODEL sonnet.
+      QT_LLM_LOCALHTTP_ENABLED: ${QT_LLM_LOCALHTTP_ENABLED:-true}
+      QT_LLM_LOCALHTTP_URL: ${QT_LLM_LOCALHTTP_URL:-http://host.docker.internal:11434/v1}
+      QT_LLM_LOCALHTTP_MODEL: ${QT_LLM_LOCALHTTP_MODEL:-}
+      # Shared secret for a local OpenAI-compatible engine that requires one (e.g. the
+      # claude bridge in tools/claude-openai-bridge). Docker Desktop reaches a host service
+      # bound to 127.0.0.1 through host.docker.internal, so loopback is enough on macOS and
+      # Windows; on Linux the bridge must bind a routable address, and then it should not be
+      # left unauthenticated.
+      QT_LLM_LOCALHTTP_API_KEY: ${QT_LLM_LOCALHTTP_API_KEY:-}
+      # Local engines (small models, CLI bridges) can be slow per call; give them more room than
+      # the 120s default so a slow-but-successful generation isn't recorded as a failed agent.
+      QUORUMTRADING_LLM_LOCALHTTP_TIMEOUT: ${QT_LLM_LOCALHTTP_TIMEOUT:-300s}
+      # The router's per-call cap sits ABOVE the HTTP timeout so the provider's own timeout is
+      # the one that fires (its error names the engine; the router's just says "timeout").
+      QT_LLM_CALL_TIMEOUT_SECONDS: ${QT_LLM_CALL_TIMEOUT_SECONDS:-330}
+      # Market data for STOCKS. Crypto needs nothing here — the built-in keyless Kraken + Coinbase
+      # adapters (quorumtrading.marketdata.kraken / .coinbase, on by default) backfill crypto with no
+      # keys, composed by the app-layer provider selection. For STOCKS the
+      # mock broker still supplies no prices, so a stock backfill/backtest needs a key below or it
+      # fails with a provider "not configured" error. Alpaca is the primary stock source (a FREE paper
+      # key covers market data); Tiingo is a no-cost fallback for daily/weekly stock bars;
+      # Finnhub/Reddit add news + sentiment. Set the keys you have in .env — see .env.local.example.
+      ALPACA_API_KEY: ${ALPACA_API_KEY:-not-configured}
+      ALPACA_API_SECRET: ${ALPACA_API_SECRET:-not-configured}
+      TIINGO_API_TOKEN: ${TIINGO_API_TOKEN:-not-configured}
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-not-configured}
+      REDDIT_CLIENT_ID: ${REDDIT_CLIENT_ID:-}
+      REDDIT_CLIENT_SECRET: ${REDDIT_CLIENT_SECRET:-}
+      # Saxo (EU broker) — experimental / largely untested. OFF until you register a personal OAuth
+      # app and set these in .env. See LOCAL_SETUP.md before relying on it.
+      SAXO_ENABLED: ${SAXO_ENABLED:-false}
+      SAXO_APP_KEY: ${SAXO_APP_KEY:-not-configured}
+      SAXO_APP_SECRET: ${SAXO_APP_SECRET:-not-configured}
+      SAXO_REDIRECT_URI: ${SAXO_REDIRECT_URI:-http://localhost:8085/api/v1/broker-accounts/saxo/onboard/callback}
+    ports:
+      - "8085:8085"
+    volumes:
+      # Persists the provisioned MCP token across restarts (idempotent provisioning).
+      - qt_local_secrets:/work/.qt-local
+
+  # Web UI (Next.js). Boots by default; omit it with the headless command in the header comment.
+  # The browser (not this container) talks to the backend, so it reaches the host-published
+  # :8085 via the built-in default base URL — no NEXT_PUBLIC_API_URL needed.
+  frontend:
+    build:
+      context: ./quorumtrading-frontend
+      dockerfile: Dockerfile
+    container_name: qt-local-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    ports:
+      - "3000:3000"
+
+volumes:
+  qt_local_pg:
+  qt_local_redis:
+  qt_local_secrets:

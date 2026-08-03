@@ -1,0 +1,48 @@
+# Multi-stage JVM image for the QuorumTrading backend.
+#
+# Self-contained: builds the app inside Docker so users without a local JDK/Maven can still
+# `docker compose -f docker-compose.local.yml up`. Build context must be the backend module root
+# (./quorumtrading-backend) so the Maven reactor and wrapper are present.
+#
+# First build is slow (downloads the full dependency tree); subsequent builds reuse the layer cache.
+
+# ---- build stage --------------------------------------------------------------------------------
+# Java 25 toolchain (the project compiles to release 25 — see backend/pom.xml java.version).
+FROM maven:3.9-eclipse-temurin-25 AS build
+WORKDIR /build
+COPY . .
+# Package only the bootstrap module and the modules it needs (-am); skip compiling/running tests.
+# jacoco.skip too: with tests skipped there is no coverage data, so the coverage-gate (jacoco:check
+# in the model/application modules) would otherwise fail the image build. Coverage stays enforced in
+# CI, which runs the real test phase.
+#
+# INCLUDE_SWAGGER_UI: Swagger UI is a *build-time* Quarkus setting — it can only be switched on
+# while the image is built, never by an env var at boot. The Maven build runs under the default
+# `prod` profile, where application.properties disables it, so the self-host stack (which the docs
+# point at /q/swagger-ui) would otherwise 404. docker-compose.local.yml passes true; the hosted
+# SaaS image keeps the secure default of false.
+ARG INCLUDE_SWAGGER_UI=false
+RUN mvn -B -Dmaven.test.skip=true -Djacoco.skip=true \
+    -Dquarkus.swagger-ui.enabled=${INCLUDE_SWAGGER_UI} \
+    -Dquarkus.swagger-ui.always-include=${INCLUDE_SWAGGER_UI} \
+    -pl quorumtrading-bootstrap -am package
+
+# ---- runtime stage ------------------------------------------------------------------------------
+FROM eclipse-temurin:25-jre
+WORKDIR /work
+
+# Non-root runtime user; pre-create the provision dir for the MCP token volume.
+RUN useradd -r -u 1001 -m -d /home/app app \
+    && mkdir -p /work/.qt-local \
+    && chown -R 1001 /work
+
+# Quarkus fast-jar layout: quarkus-run.jar + lib/ app/ quarkus/ (paths are relative to /work).
+COPY --from=build --chown=1001 /build/quorumtrading-bootstrap/target/quarkus-app/ /work/
+
+EXPOSE 8085
+USER 1001
+
+ENV QUARKUS_HTTP_HOST=0.0.0.0 \
+    JAVA_OPTS_APPEND="-XX:MaxRAMPercentage=75.0"
+
+CMD ["java", "-jar", "/work/quarkus-run.jar"]

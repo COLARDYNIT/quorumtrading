@@ -1,0 +1,986 @@
+---
+openapi: 3.1.0
+components:
+  schemas:
+    ConsensusDecisionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        simulationId:
+          type: string
+        decisionTimestamp:
+          type: string
+        consensusMethod:
+          type: string
+        finalAction:
+          type: string
+        executed:
+          type: boolean
+        notes:
+          type: string
+    ConsensusDecisionsResponse:
+      type: object
+      properties:
+        decisions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConsensusDecisionResponse"
+        total:
+          type: integer
+          format: int32
+        simulationId:
+          $ref: "#/components/schemas/UUID"
+        limit:
+          type: integer
+          format: int32
+    CreateSimulationRequest:
+      type: object
+      required:
+      - strategyId
+      - startDate
+      - endDate
+      description: Request to create a new backtesting simulation
+      properties:
+        strategyId:
+          type: string
+          examples:
+          - 550e8400-e29b-41d4-a716-446655440000
+          pattern: \S
+          description: Strategy version ID to use for this simulation
+        startDate:
+          $ref: "#/components/schemas/Instant"
+          type: string
+          examples:
+          - 2023-01-01T00:00:00Z
+          description: Simulation start date (ISO 8601 timestamp)
+        endDate:
+          $ref: "#/components/schemas/Instant"
+          type: string
+          examples:
+          - 2023-12-31T23:59:59Z
+          description: Simulation end date (ISO 8601 timestamp)
+        name:
+          type: string
+          examples:
+          - BTC Momentum Strategy Backtest Q1 2023
+          description: Optional simulation name
+        initialCash:
+          type: number
+          format: double
+          examples:
+          - 100000.0
+          description: Initial cash balance in USD
+          default: 100000.0
+    CreateStrategyRequest:
+      type: object
+      required:
+      - name
+      - markdownContent
+      description: Request to create a new trading strategy
+      properties:
+        name:
+          type: string
+          examples:
+          - BTC Momentum Strategy
+          pattern: \S
+          description: Strategy name
+        markdownContent:
+          type: string
+          examples:
+          - |
+            # BTC Momentum Strategy
+
+            ## Consensus Method
+            WEIGHTED
+
+            ## Evaluation Interval Hours
+            6
+
+            ## Rules
+            - Buy when RSI < 30 and MACD crosses above signal line
+            - Sell when RSI > 70 or MACD crosses below signal line
+            - Maximum position size: 30% of portfolio
+          pattern: \S
+          description: Strategy configuration in markdown format
+    Instant:
+      type: string
+      format: date-time
+    LLMDecisionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        simulationId:
+          type: string
+        agentType:
+          type: string
+        decisionTimestamp:
+          type: string
+        reasoning:
+          type: string
+        suggestedAction:
+          type: string
+        confidence:
+          type: number
+          format: double
+    LLMDecisionsResponse:
+      type: object
+      properties:
+        decisions:
+          type: array
+          items:
+            $ref: "#/components/schemas/LLMDecisionResponse"
+        total:
+          type: integer
+          format: int32
+        simulationId:
+          $ref: "#/components/schemas/UUID"
+        limit:
+          type: integer
+          format: int32
+    MarketEventResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+        eventType:
+          type: string
+        source:
+          type: string
+        symbol:
+          type: string
+        rawData:
+          type: object
+          additionalProperties: {}
+        ingestedAt:
+          type: string
+    MarketEventsResponse:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/MarketEventResponse"
+        total:
+          type: integer
+          format: int32
+        from:
+          $ref: "#/components/schemas/Instant"
+        to:
+          $ref: "#/components/schemas/Instant"
+        limit:
+          type: integer
+          format: int32
+    PortfolioSnapshotResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        simulationId:
+          type: string
+        timestamp:
+          type: string
+        cashBalance:
+          type: number
+          format: double
+        positions:
+          type: object
+          additionalProperties: {}
+        totalValue:
+          type: number
+          format: double
+    PortfolioSnapshotsResponse:
+      type: object
+      properties:
+        snapshots:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortfolioSnapshotResponse"
+        total:
+          type: integer
+          format: int32
+        simulationId:
+          $ref: "#/components/schemas/UUID"
+        limit:
+          type: integer
+          format: int32
+    ProblemDetail:
+      type: object
+      description: RFC 9457 Problem Details for HTTP APIs
+      properties:
+        type:
+          type: string
+          format: uri
+          examples:
+          - about:blank
+          description: URI reference identifying the problem type
+        title:
+          type: string
+          examples:
+          - Bad Request
+          description: "Short, human-readable summary of the problem type"
+        status:
+          type: integer
+          format: int32
+          examples:
+          - 400
+          description: HTTP status code
+        detail:
+          type: string
+          examples:
+          - The request body is invalid
+          description: Human-readable explanation specific to this occurrence
+        instance:
+          type: string
+          format: uri
+          examples:
+          - /api/v1/simulations
+          description: URI reference identifying the specific occurrence of the problem
+        timestamp:
+          $ref: "#/components/schemas/Instant"
+          type: string
+          examples:
+          - 2025-10-27T10:30:00Z
+          description: Timestamp when the problem occurred
+        extensions:
+          type: object
+          additionalProperties: {}
+          description: Additional extension members (optional)
+    ProblemDetails:
+      type: object
+      description: RFC 7807 Problem Details for HTTP APIs - standardized error response
+      properties:
+        type:
+          type: string
+          examples:
+          - https://api.quorumtrading.com/problems/validation-error
+          description: URI reference identifying the problem type
+        title:
+          type: string
+          examples:
+          - Validation Failed
+          description: "Short, human-readable summary"
+        status:
+          type: integer
+          format: int32
+          examples:
+          - 400
+          description: HTTP status code
+        detail:
+          type: string
+          examples:
+          - Version is required
+          description: Human-readable explanation specific to this occurrence
+        instance:
+          type: string
+          examples:
+          - /api/v1/strategies
+          description: URI reference identifying the specific occurrence
+        timestamp:
+          $ref: "#/components/schemas/Instant"
+          type: string
+          examples:
+          - 2025-01-20T10:30:00Z
+          description: Timestamp when the error occurred
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationError"
+          description: List of validation errors (present for 400 Bad Request responses)
+    SimulationResponse:
+      type: object
+      description: Simulation details response
+      properties:
+        id:
+          type: string
+          examples:
+          - 550e8400-e29b-41d4-a716-446655440000
+          description: Unique simulation identifier
+        strategyId:
+          type: string
+          examples:
+          - 660f9511-f39c-52e5-b827-557766551111
+          description: Strategy version ID
+        startDate:
+          $ref: "#/components/schemas/Instant"
+          type: string
+          examples:
+          - 2023-01-01T00:00:00Z
+          description: Simulation start date
+        endDate:
+          $ref: "#/components/schemas/Instant"
+          type: string
+          examples:
+          - 2023-12-31T23:59:59Z
+          description: Simulation end date
+        status:
+          type: string
+          enum:
+          - PENDING
+          - RUNNING
+          - COMPLETED
+          - FAILED
+          examples:
+          - COMPLETED
+          description: Current simulation status
+        name:
+          type: string
+          examples:
+          - BTC Momentum Strategy Backtest Q1 2023
+          description: Simulation name
+        progress:
+          type: integer
+          format: int32
+          examples:
+          - 100
+          description: Completion progress (0-100)
+        createdAt:
+          $ref: "#/components/schemas/Instant"
+          type: string
+          examples:
+          - 2025-10-27T10:00:00Z
+          description: Timestamp when simulation was created
+        startedAt:
+          $ref: "#/components/schemas/Instant"
+          type: string
+          examples:
+          - 2025-10-27T10:01:00Z
+          description: Timestamp when simulation started execution
+        completedAt:
+          $ref: "#/components/schemas/Instant"
+          type: string
+          examples:
+          - 2025-10-27T10:15:00Z
+          description: Timestamp when simulation completed
+    StrategyResponse:
+      type: object
+      description: Strategy details response
+      properties:
+        id:
+          type: string
+          examples:
+          - 660f9511-f39c-52e5-b827-557766551111
+          description: Unique strategy identifier (UUID)
+        name:
+          type: string
+          examples:
+          - BTC Momentum Strategy
+          description: Strategy name
+        version:
+          type: integer
+          format: int32
+          examples:
+          - 1
+          description: Hibernate @Version field for optimistic locking (starts at
+            1)
+        markdownContent:
+          type: string
+          description: Strategy configuration in markdown format
+        createdAt:
+          $ref: "#/components/schemas/Instant"
+          type: string
+          examples:
+          - 2025-10-27T10:00:00Z
+          description: Timestamp when strategy was created
+    UUID:
+      type: string
+      format: uuid
+      pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+    ValidationError:
+      type: object
+      description: Validation error details
+      properties:
+        field:
+          type: string
+          examples:
+          - version
+          description: Field name that failed validation
+        message:
+          type: string
+          examples:
+          - Version is required
+          description: Validation error message
+        rejectedValue:
+          examples:
+          - ""
+          description: The value that was rejected
+tags:
+- name: Decisions
+  description: Agent decision history
+- name: Market Data
+  description: Historical market events
+- name: Portfolio
+  description: Portfolio snapshots
+- name: Simulations
+  description: Backtesting simulation management
+- name: Strategies
+  description: Trading strategy version management
+paths:
+  /api/v1/decisions/consensus:
+    get:
+      summary: List consensus decisions
+      description: "Retrieves consensus decisions (aggregated from LLM agents) for\
+        \ a simulation, optionally filtered by time range and execution status"
+      tags:
+      - Decisions
+      parameters:
+      - description: "Filter by execution status (true = executed, false = not executed)"
+        example: true
+        required: false
+        name: executed
+        in: query
+        schema:
+          type: boolean
+      - description: Start timestamp in ISO-8601 format
+        example: 2023-01-01T00:00:00Z
+        required: false
+        name: from
+        in: query
+        schema:
+          type: string
+      - description: Maximum number of decisions to return (1-1000)
+        example: 100
+        required: false
+        name: limit
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - description: Simulation unique identifier
+        example: 550e8400-e29b-41d4-a716-446655440000
+        required: true
+        name: simulationId
+        in: query
+        schema:
+          type: string
+      - description: End timestamp in ISO-8601 format
+        example: 2023-12-31T23:59:59Z
+        required: false
+        name: to
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Consensus decisions retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsensusDecisionsResponse"
+        "400":
+          description: Bad request - missing required parameters or invalid format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /api/v1/decisions/llm:
+    get:
+      summary: List LLM decisions
+      description: "Retrieves individual LLM agent decisions for a simulation, optionally\
+        \ filtered by time range and agent ID"
+      tags:
+      - Decisions
+      parameters:
+      - description: Filter by specific agent ID
+        example: agent-001
+        required: false
+        name: agentId
+        in: query
+        schema:
+          type: string
+      - description: Start timestamp in ISO-8601 format
+        example: 2023-01-01T00:00:00Z
+        required: false
+        name: from
+        in: query
+        schema:
+          type: string
+      - description: Maximum number of decisions to return (1-1000)
+        example: 100
+        required: false
+        name: limit
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - description: Simulation unique identifier
+        example: 550e8400-e29b-41d4-a716-446655440000
+        required: true
+        name: simulationId
+        in: query
+        schema:
+          type: string
+      - description: End timestamp in ISO-8601 format
+        example: 2023-12-31T23:59:59Z
+        required: false
+        name: to
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: LLM decisions retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LLMDecisionsResponse"
+        "400":
+          description: Bad request - missing required parameters or invalid format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /api/v1/market-data/collect:
+    post:
+      summary: Trigger market data collection
+      description: Manually triggers data collection from all enabled market data
+        providers. Useful for testing and on-demand data ingestion.
+      tags:
+      - Market Data
+      parameters:
+      - description: "Optional category filter (e.g., 'crypto', 'forex')"
+        example: crypto
+        required: false
+        name: category
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Data collection completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /api/v1/market-data/events:
+    get:
+      summary: Query market events
+      description: "Retrieves historical market events (price updates, news, Reddit\
+        \ posts) within a specified time range with optional filters"
+      tags:
+      - Market Data
+      parameters:
+      - description: "Filter by event type (PRICE_UPDATE, NEWS, REDDIT_POST)"
+        example: PRICE_UPDATE
+        required: false
+        name: eventType
+        in: query
+        schema:
+          type: string
+      - description: Start timestamp in ISO-8601 format
+        example: 2023-01-01T00:00:00Z
+        required: true
+        name: from
+        in: query
+        schema:
+          type: string
+      - description: Maximum number of events to return (1-1000)
+        example: 100
+        required: false
+        name: limit
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - description: Filter by data source
+        example: coinbase
+        required: false
+        name: source
+        in: query
+        schema:
+          type: string
+      - description: "Filter by trading symbol (e.g., BTC, ETH)"
+        example: BTC
+        required: false
+        name: symbol
+        in: query
+        schema:
+          type: string
+      - description: End timestamp in ISO-8601 format
+        example: 2023-12-31T23:59:59Z
+        required: true
+        name: to
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Market events retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketEventsResponse"
+        "400":
+          description: Bad request - missing required parameters or invalid format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "422":
+          description: Unprocessable entity - time range exceeds 365 days or 'from'
+            is after 'to'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /api/v1/portfolios/snapshots:
+    get:
+      summary: Query portfolio snapshots
+      description: "Retrieves historical portfolio snapshots for a simulation, showing\
+        \ portfolio state over time"
+      tags:
+      - Portfolio
+      parameters:
+      - description: Start timestamp in ISO-8601 format
+        example: 2023-01-01T00:00:00Z
+        required: false
+        name: from
+        in: query
+        schema:
+          type: string
+      - description: Maximum number of snapshots to return (1-1000)
+        example: 100
+        required: false
+        name: limit
+        in: query
+        schema:
+          type: integer
+          format: int32
+      - description: Simulation unique identifier
+        example: 550e8400-e29b-41d4-a716-446655440000
+        required: true
+        name: simulationId
+        in: query
+        schema:
+          type: string
+      - description: End timestamp in ISO-8601 format
+        example: 2023-12-31T23:59:59Z
+        required: false
+        name: to
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Portfolio snapshots retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioSnapshotsResponse"
+        "400":
+          description: Bad request - missing required parameters or invalid format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+  /api/v1/simulations:
+    get:
+      summary: List simulations
+      description: "Retrieves all simulations, optionally filtered by status"
+      tags:
+      - Simulations
+      parameters:
+      - description: "Filter by status (PENDING, RUNNING, COMPLETED, FAILED)"
+        name: status
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: List of simulations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SimulationResponse"
+        "400":
+          description: Bad request - invalid status value
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+    post:
+      summary: Create simulation
+      description: Creates a new backtesting simulation with specified strategy and
+        time range
+      tags:
+      - Simulations
+      requestBody:
+        description: Simulation creation request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSimulationRequest"
+      responses:
+        "201":
+          description: Simulation created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulationResponse"
+        "400":
+          description: Bad request - validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "404":
+          description: Strategy not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+  /api/v1/simulations/{id}:
+    get:
+      summary: Get simulation by ID
+      description: Retrieves a specific simulation by its unique identifier
+      tags:
+      - Simulations
+      parameters:
+      - description: Simulation unique identifier
+        required: true
+        name: id
+        in: path
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Simulation retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulationResponse"
+        "404":
+          description: Simulation not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+    delete:
+      summary: Delete simulation
+      description: Deletes a simulation. Cannot delete a running simulation.
+      tags:
+      - Simulations
+      parameters:
+      - description: Simulation unique identifier
+        required: true
+        name: id
+        in: path
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Simulation deleted successfully
+        "404":
+          description: Simulation not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "409":
+          description: Conflict - cannot delete running simulation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+  /api/v1/simulations/{id}/start:
+    post:
+      summary: Start simulation execution
+      description: Starts execution of a pending simulation
+      tags:
+      - Simulations
+      parameters:
+      - description: Simulation unique identifier
+        required: true
+        name: id
+        in: path
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Simulation started successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulationResponse"
+        "404":
+          description: Simulation not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "409":
+          description: Conflict - simulation is not in PENDING status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+  /api/v1/strategies:
+    get:
+      summary: List all strategies
+      description: Retrieves all trading strategies
+      tags:
+      - Strategies
+      responses:
+        "200":
+          description: List of strategies retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StrategyResponse"
+    post:
+      summary: Create new strategy
+      description: Creates a new trading strategy with markdown content
+      tags:
+      - Strategies
+      requestBody:
+        description: Strategy creation request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStrategyRequest"
+      responses:
+        "201":
+          description: Strategy created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StrategyResponse"
+        "400":
+          description: Bad request - validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+  /api/v1/strategies/{id}:
+    put:
+      summary: Update strategy
+      description: Updates an existing strategy's content
+      tags:
+      - Strategies
+      parameters:
+      - description: Strategy unique identifier
+        required: true
+        name: id
+        in: path
+        schema:
+          type: string
+      requestBody:
+        description: Strategy update request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStrategyRequest"
+      responses:
+        "200":
+          description: Strategy updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StrategyResponse"
+        "400":
+          description: Bad request - validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "404":
+          description: Strategy not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+    get:
+      summary: Get strategy by ID
+      description: Retrieves a specific strategy by its unique identifier
+      tags:
+      - Strategies
+      parameters:
+      - description: Strategy unique identifier
+        required: true
+        name: id
+        in: path
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Strategy retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StrategyResponse"
+        "404":
+          description: Strategy not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+    delete:
+      summary: Delete strategy
+      description: Deletes a strategy. Cannot delete if referenced by simulations.
+      tags:
+      - Strategies
+      parameters:
+      - description: Strategy unique identifier
+        required: true
+        name: id
+        in: path
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Strategy deleted successfully
+        "404":
+          description: Strategy not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "409":
+          description: Conflict - strategy is referenced by simulations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+info:
+  title: quorumtrading API
+  version: 1.0.0-SNAPSHOT

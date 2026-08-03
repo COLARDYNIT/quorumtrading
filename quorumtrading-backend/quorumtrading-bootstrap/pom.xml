@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.quorumtrading</groupId>
+        <artifactId>quorumtrading-backend-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>quorumtrading-bootstrap</artifactId>
+    <packaging>jar</packaging>
+
+    <name>QuorumTrading Backend - Bootstrap</name>
+    <description>Main Quarkus application that integrates all adapters</description>
+
+    <dependencies>
+        <!--
+          @QuarkusTest classes load through the Quarkus classloader, which the plain JaCoCo java
+          agent does not instrument — without this extension every @QuarkusTest in this module
+          contributes nothing to the coverage report, however much it actually exercises.
+        -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jacoco</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Internal modules - Model and Application -->
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-model</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-application</artifactId>
+        </dependency>
+
+        <!-- Adapter modules - Persistence -->
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-persistence</artifactId>
+        </dependency>
+
+        <!-- Adapter modules - REST, MCP, and WebSocket -->
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-rest</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-mcp</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-websocket</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-redis</artifactId>
+        </dependency>
+
+        <!-- Adapter modules - LLM Providers -->
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-llm-local</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-llm-openrouter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-llm-router</artifactId>
+        </dependency>
+
+        <!-- Adapter modules - Market Data Providers -->
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-marketdata-reddit</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-marketdata-finnhub</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-marketdata-rss</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-marketdata-alpaca</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-marketdata-tiingo</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-marketdata-saxo</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-marketdata-kraken</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-marketdata-coinbase</artifactId>
+        </dependency>
+        <!-- Adapter modules - Broker -->
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-broker-mock</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-broker-alpaca</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-broker-saxo</artifactId>
+        </dependency>
+
+        <!-- Adapter modules - Payment -->
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-payment-stripe</artifactId>
+        </dependency>
+
+        <!-- Adapter modules - Feature flags -->
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-featureflag-unleash</artifactId>
+        </dependency>
+
+        <!-- Quarkus Core -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-websockets</artifactId>
+        </dependency>
+
+        <!-- Quarkus Database -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-orm-panache</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-flyway</artifactId>
+        </dependency>
+
+        <!-- Quarkus REST Client -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-client-jackson</artifactId>
+        </dependency>
+
+        <!-- Quarkus Config -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-config-yaml</artifactId>
+        </dependency>
+
+        <!-- Quarkus OpenAPI -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-openapi</artifactId>
+        </dependency>
+
+        <!-- Quarkus Cache (Caffeine) for model reliability stats -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-cache</artifactId>
+        </dependency>
+
+        <!-- Quarkus Health -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-health</artifactId>
+        </dependency>
+
+        <!-- Micrometer for ThreadPool metrics -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
+        </dependency>
+
+        <!-- Quarkus Quartz (clustered scheduler via JDBC) -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-quartz</artifactId>
+        </dependency>
+
+        <!-- OIDC for OAuth2 authentication -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-oidc</artifactId>
+        </dependency>
+
+        <!-- Email delivery (SMTP, SES via SMTP, MailHog locally) -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-mailer</artifactId>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-test-h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jdbc-h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <version>1.4.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>${quarkus.platform.group-id}</groupId>
+                <artifactId>quarkus-maven-plugin</artifactId>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>generate-code</goal>
+                            <goal>generate-code-tests</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <parameters>true</parameters>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <!--
+              The native smoke tests. @QuarkusIntegrationTest launches the PACKAGED artifact as a
+              separate process instead of booting Quarkus in-JVM, so under -Pnative these run
+              against the native binary that is about to be pushed to ECR. That is coverage no
+              @QuarkusTest can give: a missing reflection or resource registration is invisible on
+              the JVM and only fails once the image is built.
+
+              Named *IT so surefire never picks them up (its default includes are Test*/*Test/
+              *Tests/*TestCase) and failsafe always does. The app repo's ci.yml passes -DskipITs,
+              which keeps them out of every PR build — they need a packaged artifact, and CI does
+              not build one.
+
+              integration-test-profile launches the artifact with -Dquarkus.profile=smoke; see the
+              %smoke block in application.properties for what that changes and why prod itself
+              cannot be booted here.
+            -->
+            <plugin>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <systemPropertyVariables>
+                        <quarkus.test.integration-test-profile>smoke</quarkus.test.integration-test-profile>
+                        <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>io.smallrye</groupId>
+                <artifactId>jandex-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>make-index</id>
+                        <goals>
+                            <goal>jandex</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>native</id>
+            <properties>
+                <!-- quarkus.package.type=native, which this used to set, was REMOVED in Quarkus
+                     3.19 and is not in 3.37's config model at all. It was therefore an unknown key
+                     that Quarkus warns about and ignores: -Pnative quietly produced an ordinary
+                     fast-jar, no *-runner binary existed, and the deploy's "upload native
+                     executable" step matched zero files. quarkus.native.enabled is the replacement. -->
+                <quarkus.native.enabled>true</quarkus.native.enabled>
+            </properties>
+        </profile>
+    </profiles>
+</project>

@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Whole-backend coverage, aggregated across every module.
+
+  Per-module JaCoCo reports only count tests that ran INSIDE that module, which badly understates
+  this codebase: the bootstrap integration tests drive real consensus rounds, real persistence and
+  real HTTP, and none of it credited the modules being exercised. ReachConsensusService read 0%
+  while ReachConsensusIntegrationTest was passing against it, and most of the persistence layer
+  looked untested for the same reason. Any coverage target set from the per-module numbers would
+  have been set against a figure that was wrong in a direction nobody could see.
+
+  This module produces the honest number. It has no sources and no tests; it exists only to depend
+  on everything else so report-aggregate can merge their exec data. It must build last.
+
+  Report: quorumtrading-coverage/target/site/jacoco-aggregate/index.html
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.quorumtrading</groupId>
+        <artifactId>quorumtrading-backend-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>quorumtrading-coverage</artifactId>
+    <name>QuorumTrading Backend - Coverage Aggregate</name>
+
+    <!--
+      No jacoco:check here on purpose. That goal analyses the CURRENT module's classes, and this
+      module deliberately has none — so a check configured here passes at any threshold, including
+      80%, while looking like a gate. The real gate reads the aggregate CSV this module produces
+      and lives in .github/workflows/ci.yml, where it can fail the build on a number that means
+      something.
+    -->
+
+    <dependencies>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-model</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-application</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-persistence</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-llm-openrouter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-llm-local</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-llm-router</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-marketdata-reddit</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-marketdata-finnhub</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-broker-mock</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-broker-alpaca</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-broker-saxo</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-marketdata-alpaca</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-marketdata-tiingo</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-marketdata-saxo</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-marketdata-kraken</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-marketdata-coinbase</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-rest</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-mcp</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-websocket</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-redis</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-payment-stripe</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-bootstrap</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-marketdata-rss</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.quorumtrading</groupId>
+            <artifactId>quorumtrading-adapter-featureflag-unleash</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <!--
+                      Inherited prepare-agent/report executions are pointless here (no sources),
+                      and the aggregate has to run after every module's tests have written their
+                      exec file — hence verify, not test.
+                    -->
+                    <execution>
+                        <id>report</id>
+                        <phase>none</phase>
+                    </execution>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <phase>none</phase>
+                    </execution>
+                    <execution>
+                        <id>aggregate-report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report-aggregate</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/site/jacoco-aggregate</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

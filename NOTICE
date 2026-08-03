@@ -1,0 +1,31 @@
+QuorumTrading
+Copyright (c) 2026 COLARDYN IT (company/VAT number BE0892696641, Mechelen, Belgium)
+
+This product is licensed under the GNU Affero General Public License v3.0 or later
+(see the LICENSE file), or under a separate commercial license (see LICENSING.md).
+
+"QuorumTrading" and associated logos are trademarks of COLARDYN IT and are NOT
+licensed under the AGPL. See TRADEMARK.md.
+
+------------------------------------------------------------------------------
+NO WARRANTY — NOT FINANCIAL ADVICE
+------------------------------------------------------------------------------
+QuorumTrading is provided "AS IS", WITHOUT WARRANTY OF ANY KIND, express or
+implied, including but not limited to the warranties of merchantability,
+fitness for a particular purpose, and non-infringement.
+
+QuorumTrading is a software tool for orchestrating and backtesting trading
+decisions. It is NOT financial, investment, tax, or trading advice, and nothing
+it produces should be relied upon as such. Trading and investing involve a
+substantial risk of loss. You are solely responsible for any decisions you make
+and any orders you place using this software, whether in simulation or against a
+live brokerage account. The authors and copyright holders accept no liability for
+any loss or damage arising from its use.
+
+------------------------------------------------------------------------------
+THIRD-PARTY COMPONENTS
+------------------------------------------------------------------------------
+This software includes third-party open-source components, each under its own
+license (e.g. Quarkus — Apache-2.0; Next.js — MIT). Their licenses are retained
+in the corresponding dependency metadata and are unaffected by the licensing of
+QuorumTrading itself.

@@ -1,0 +1,50 @@
+# Build context for the frontend image (docker-compose.local.yml -> context: ./quorumtrading-frontend).
+#
+# Without this file the context is 3.1 GB, nearly all of it node_modules and .next that the build
+# immediately discards and regenerates. That is the single biggest cost in the "all you need is
+# Docker" first run the README advertises.
+#
+# node_modules is not just weight, it is a correctness bug. The Dockerfile does:
+#     COPY --from=deps /app/node_modules ./node_modules      # linux, installed by npm ci
+#     COPY . .                                               # <- host node_modules lands on top
+# so a macOS-built tree silently overwrites the linux one, and the platform-specific optional
+# dependencies no longer match the image. Excluding it is what makes `npm ci` in the deps stage
+# mean anything.
+
+# Dependencies and build output — reinstalled/rebuilt inside the image
+node_modules
+.next
+out
+build
+
+# Local env. `next build` reads .env.local, so leaving it in the context bakes whatever a
+# developer happens to have locally into the image. The compose stack passes no NEXT_PUBLIC_*
+# build args on purpose — it relies on the built-in default base URL. A committed .env.production
+# is still honoured.
+.env
+.env*.local
+.env.local.backup
+.env.local.profile
+
+# Test and coverage artifacts, none of which belong in an image
+coverage
+playwright-report
+test-results
+blob-report
+playwright/.cache
+# Saved Playwright session state — real auth cookies for the e2e user
+.playwright
+
+# Editor and OS noise
+.idea/
+.vscode/
+.DS_Store
+*.log
+npm-debug.log*
+
+# Never needed at build time
+.git
+.gitignore
+Dockerfile
+.dockerignore
+README.md

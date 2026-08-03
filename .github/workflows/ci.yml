@@ -1,0 +1,301 @@
+# Continuous integration — build + test only. NO deploy, NO AWS, NO secrets.
+#
+# This is the app repo's sole pipeline: it validates every PR and every push to main, and is
+# safe to run for forked PRs because it never touches credentials. Production deploy lives in the
+# private quorumtrading-infra repo, whose workflows assume the prod OIDC role — this repo cannot.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (build + test)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: quorumtrading
+          POSTGRES_PASSWORD: dev-password
+          POSTGRES_DB: quorumtrading_test
+        # The %test profile expects postgres on localhost:55432 (matches docker-compose).
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      # Chat sessions live in Redis, so the backend suite cannot exercise them without one.
+      # The e2e job already runs this image; the backend job simply never did, which is why a
+      # Redis-backed feature could be tested locally and still break here.
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The diff-coverage gate compares against origin/main. A shallow clone does not have
+          # it, and the failure mode is a silent empty diff that reports green having checked
+          # nothing — so the full history is fetched rather than trusted to be there.
+          fetch-depth: 0
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Build and test
+        working-directory: quorumtrading-backend
+        run: |
+          ./mvnw clean compile -DskipTests
+          # verify, not test: the aggregate coverage report is produced at verify by the
+          # quorumtrading-coverage module, and the gate below reads it.
+          ./mvnw verify -DskipITs
+
+      - name: Coverage gate (aggregate floor)
+        run: ./scripts/check-backend-coverage.sh
+
+      # The aggregate floor above cannot catch a single untested class — it moves the number by
+      # a fraction of a point. This one gates the lines the PR actually changed.
+      #
+      # setup-python rather than the runner's system python: Ubuntu marks that one
+      # externally-managed (PEP 668) and a bare `pip install` fails on it.
+      - name: Set up Python (for diff-cover)
+        if: github.event_name == 'pull_request'
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Coverage gate (changed lines)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: |
+          python -m pip install --quiet diff-cover
+          ./scripts/check-diff-coverage.sh backend
+
+  frontend:
+    name: Frontend (build + test)
+    runs-on: ubuntu-latest
+    env:
+      # tsc/jest/next all exceed Node's default ~2GB heap on this codebase (tsc OOM'd on the
+      # first CI run) — applies to every step in the job.
+      NODE_OPTIONS: '--max-old-space-size=4096'
+    defaults:
+      run:
+        working-directory: quorumtrading-frontend
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # See the backend job: the diff-coverage gate needs origin/main to exist locally.
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: quorumtrading-frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Gating. It was continue-on-error for "~14 eslint errors", which turned out to be a
+      # generous reading: eslint was not linting anything at all, exiting 2 on a plugin crash
+      # before it reached a single rule. The crash is fixed, the 14 errors behind it are fixed,
+      # and the step now fails the build — which is the only reason to run it.
+      #
+      # Warnings are capped, not merely allowed: `npm run lint` carries --max-warnings 848, which
+      # is the current count (337 pre-existing + 511 from eslint-plugin-sonarjs). One new smell
+      # takes the build red. Lower the cap as warnings are fixed; never raise it to go green, and
+      # do NOT restore continue-on-error.
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Unit tests (with coverage ratchet)
+        # --coverage activates the coverageThreshold ratchet in jest.config.js
+        run: npm test -- --passWithNoTests --coverage
+
+      # The jest coverageThreshold is an aggregate floor sitting just under a ~5% total, so it
+      # permits almost anything. This gates the lines the PR changed, at a floor well above that
+      # total, which is what makes the total climb.
+      - name: Set up Python (for diff-cover)
+        if: github.event_name == 'pull_request'
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      # The script resolves the repo root from its own location, so the job's
+      # quorumtrading-frontend working-directory does not matter here.
+      - name: Coverage gate (changed lines)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: |
+          python -m pip install --quiet diff-cover
+          ../scripts/check-diff-coverage.sh frontend
+
+      - name: Production build
+        run: npm run build
+
+  e2e:
+    name: Frontend e2e (landing)
+    runs-on: ubuntu-latest
+    # Smoke-level browser coverage of the public landing page. Gating: it needs no backend,
+    # no secrets and no network, so a failure here is a real regression, never infrastructure.
+    defaults:
+      run:
+        working-directory: quorumtrading-frontend
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: quorumtrading-frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run E2E landing page tests
+        run: npx playwright test e2e/landing.spec.ts --project=public --reporter=github
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-report
+          path: quorumtrading-frontend/playwright-report/
+          retention-days: 7
+
+  e2e-core-loop:
+    name: E2E full stack (backend + frontend + playwright)
+    runs-on: ubuntu-latest
+    # Deterministic full-stack e2e: %e2e backend (dummy LLM + Flyway-seeded market data),
+    # Next dev server, the whole Playwright suite. Zero secrets, zero external network calls —
+    # safe on forked PRs, and free, so there is no reason not to gate on it.
+    #
+    # This job used to run a single spec and carry continue-on-error, which is precisely how
+    # five e2e projects rotted unnoticed: they either never ran or could not fail the build.
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: quorumtrading
+          POSTGRES_PASSWORD: dev-password
+          POSTGRES_DB: quorumtrading_test
+        # %e2e profile expects postgres on localhost:55432 (matches docker-compose)
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Build backend (skip tests)
+        working-directory: quorumtrading-backend
+        run: ./mvnw -q package -DskipTests
+
+      - name: Start backend (%e2e profile)
+        working-directory: quorumtrading-backend
+        run: |
+          QUARKUS_PROFILE=e2e nohup java -jar quorumtrading-bootstrap/target/quarkus-app/quarkus-run.jar \
+            > /tmp/backend-e2e.log 2>&1 &
+          echo "Waiting for backend readiness..."
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8085/q/health/ready > /dev/null; then
+              echo "Backend ready after ~$((i*2))s"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend failed to become ready" >&2
+          tail -100 /tmp/backend-e2e.log >&2
+          exit 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: quorumtrading-frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: quorumtrading-frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: quorumtrading-frontend
+        run: npx playwright install chromium --with-deps
+
+      # The whole suite, every project, one gating step.
+      #
+      # This deliberately does NOT enumerate projects. It used to name five of them and run
+      # core-loop separately under continue-on-error — which is how five projects rotted unnoticed
+      # (never listed, so never run) and how a real engine defect sat behind a non-gating step: a
+      # zero-width market-data pre-flight window that paused every backtest on evaluation #0.
+      # An unfiltered run means a project added to playwright.config is covered the day it lands.
+      #
+      # playwright.config's webServer starts `npm run dev` on :3000 (CI ⇒ never reuses), and the
+      # auth 'setup' project is pulled in automatically as a dependency. This re-runs `public`,
+      # which the backend-free e2e job also covers — a second or two, worth it for the guarantee.
+      - name: Run e2e (full Playwright suite)
+        working-directory: quorumtrading-frontend
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+        run: npx playwright test --reporter=github
+
+      - name: Upload artifacts (report + backend log)
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: core-loop-report
+          path: |
+            quorumtrading-frontend/playwright-report/
+            /tmp/backend-e2e.log
+          retention-days: 7

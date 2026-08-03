@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN welcome_budget_credited BOOLEAN NOT NULL DEFAULT FALSE;

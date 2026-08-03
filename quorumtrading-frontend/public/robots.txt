@@ -1,0 +1,9 @@
+# QuorumTrading robots.txt
+User-agent: *
+Allow: /
+
+Disallow: /api/
+Disallow: /auth/
+Disallow: /settings/
+
+Sitemap: https://quorumtrading.com/sitemap.xml

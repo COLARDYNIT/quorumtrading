@@ -1,0 +1,1714 @@
+{
+  "openapi" : "3.1.0",
+  "components" : {
+    "schemas" : {
+      "ConsensusDecisionResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "simulationId" : {
+            "$ref" : "#/components/schemas/UUID"
+          },
+          "decisionTimestamp" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "triggerEventId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "llmDecisionIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "integer",
+              "format" : "int64"
+            }
+          },
+          "consensusMethod" : {
+            "type" : "string"
+          },
+          "finalAction" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          },
+          "executed" : {
+            "type" : "boolean"
+          },
+          "executionPrice" : {
+            "type" : "number"
+          },
+          "notes" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ConsensusDecisionsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "decisions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ConsensusDecisionResponse"
+            }
+          },
+          "total" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "simulationId" : {
+            "$ref" : "#/components/schemas/UUID"
+          },
+          "limit" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "CreateSimulationRequest" : {
+        "description" : "Simulation creation request",
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "description" : "Descriptive name for the simulation",
+            "examples" : [ "BTC Momentum Test Q1 2023" ]
+          },
+          "strategyVersion" : {
+            "type" : "string",
+            "description" : "Strategy version identifier to use for this simulation",
+            "examples" : [ "v1.0" ]
+          },
+          "startDate" : {
+            "description" : "Simulation start timestamp in ISO-8601 format (use startTime as alternative)",
+            "type" : "string",
+            "examples" : [ "2023-01-01T00:00:00Z" ],
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "endDate" : {
+            "description" : "Simulation end timestamp in ISO-8601 format (use endTime as alternative)",
+            "type" : "string",
+            "examples" : [ "2023-12-31T23:59:59Z" ],
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "startTime" : {
+            "description" : "Alternative to startDate for frontend compatibility",
+            "type" : "string",
+            "examples" : [ "2023-01-01T00:00:00Z" ],
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "endTime" : {
+            "description" : "Alternative to endDate for frontend compatibility",
+            "type" : "string",
+            "examples" : [ "2023-12-31T23:59:59Z" ],
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "initialCapital" : {
+            "type" : "number",
+            "minimum" : 0.01,
+            "description" : "Simplified initial capital (alternative to initialPortfolio). Will be converted to portfolio with only cash.",
+            "examples" : [ 100000 ]
+          },
+          "notes" : {
+            "type" : "string",
+            "description" : "Optional user notes about the simulation",
+            "examples" : [ "Testing momentum strategy on BTC" ]
+          },
+          "initialPortfolio" : {
+            "description" : "Initial portfolio state (cash and positions). Optional if initialCapital is provided.",
+            "type" : "object",
+            "$ref" : "#/components/schemas/InitialPortfolio"
+          },
+          "configuration" : {
+            "type" : "object",
+            "additionalProperties" : { },
+            "description" : "Strategy-specific configuration parameters",
+            "examples" : [ {
+              "maxPositionSize" : 0.3,
+              "riskPerTrade" : 0.02
+            } ]
+          }
+        },
+        "required" : [ "strategyVersion" ]
+      },
+      "CreateStrategyRequest" : {
+        "description" : "Strategy creation request",
+        "type" : "object",
+        "required" : [ "version", "markdownContent" ],
+        "properties" : {
+          "version" : {
+            "type" : "string",
+            "maxLength" : 50,
+            "pattern" : "^v\\d+\\.\\d+(-[a-zA-Z0-9-]+)?$",
+            "description" : "Version identifier following semantic versioning (e.g., v1.0, v2.0-alpha)",
+            "examples" : [ "v1.0" ]
+          },
+          "markdownContent" : {
+            "type" : "string",
+            "maxLength" : 51200,
+            "minLength" : 10,
+            "description" : "Markdown content describing the trading strategy",
+            "examples" : [ "# My Trading Strategy\\n\\nThis strategy uses momentum indicators..." ]
+          },
+          "notes" : {
+            "type" : "string",
+            "maxLength" : 500,
+            "description" : "Optional notes about this strategy version",
+            "examples" : [ "Initial version with basic momentum rules" ]
+          }
+        }
+      },
+      "InitialPortfolio" : {
+        "type" : "object",
+        "description" : "Initial portfolio configuration",
+        "required" : [ "cash" ],
+        "properties" : {
+          "cash" : {
+            "type" : "number",
+            "minimum" : 0.01,
+            "description" : "Initial cash balance",
+            "examples" : [ 100000 ]
+          },
+          "positions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Position"
+            },
+            "description" : "Initial positions (optional)"
+          }
+        }
+      },
+      "Instant" : {
+        "type" : "string",
+        "format" : "date-time"
+      },
+      "LLMDecisionResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "simulationId" : {
+            "$ref" : "#/components/schemas/UUID"
+          },
+          "decisionTimestamp" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "agentId" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "llmModel" : {
+            "type" : "string"
+          },
+          "promptUsed" : {
+            "type" : "string"
+          },
+          "reasoning" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          },
+          "recommendation" : {
+            "type" : "string"
+          },
+          "recommendedAction" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          },
+          "confidenceScore" : {
+            "type" : "number"
+          },
+          "executionTimeMs" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "LLMDecisionsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "decisions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/LLMDecisionResponse"
+            }
+          },
+          "total" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "simulationId" : {
+            "$ref" : "#/components/schemas/UUID"
+          },
+          "limit" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "MarketEventResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "timestamp" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "eventType" : {
+            "type" : "string"
+          },
+          "source" : {
+            "type" : "string"
+          },
+          "symbol" : {
+            "type" : "string"
+          },
+          "rawData" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          },
+          "ingestedAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          }
+        }
+      },
+      "MarketEventsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "events" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/MarketEventResponse"
+            }
+          },
+          "total" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "from" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "to" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "limit" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "PortfolioInfo" : {
+        "type" : "object",
+        "description" : "Portfolio information",
+        "properties" : {
+          "cash" : {
+            "type" : "number",
+            "description" : "Cash balance",
+            "examples" : [ 98500.50 ]
+          },
+          "positions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PositionInfo"
+            },
+            "description" : "List of positions"
+          },
+          "totalValue" : {
+            "type" : "number",
+            "description" : "Total portfolio value",
+            "examples" : [ 125000.00 ]
+          }
+        }
+      },
+      "PortfolioSnapshotResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "simulationId" : {
+            "$ref" : "#/components/schemas/UUID"
+          },
+          "timestamp" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "totalValueUsd" : {
+            "type" : "number"
+          },
+          "cashAvailable" : {
+            "type" : "number"
+          },
+          "positions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Position1"
+            }
+          }
+        }
+      },
+      "PortfolioSnapshotsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "snapshots" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PortfolioSnapshotResponse"
+            }
+          },
+          "total" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "simulationId" : {
+            "$ref" : "#/components/schemas/UUID"
+          },
+          "limit" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "Position" : {
+        "type" : "object",
+        "description" : "Position in a portfolio",
+        "required" : [ "symbol", "quantity" ],
+        "properties" : {
+          "symbol" : {
+            "type" : "string",
+            "maxLength" : 20,
+            "description" : "Trading symbol",
+            "examples" : [ "BTC" ]
+          },
+          "quantity" : {
+            "type" : "number",
+            "minimum" : 1E-8,
+            "description" : "Position quantity",
+            "examples" : [ 0.5 ]
+          }
+        }
+      },
+      "Position1" : {
+        "type" : "object",
+        "properties" : {
+          "symbol" : {
+            "type" : "string"
+          },
+          "quantity" : {
+            "type" : "number"
+          },
+          "value" : {
+            "type" : "number"
+          },
+          "averagePrice" : {
+            "type" : "number"
+          },
+          "currentPrice" : {
+            "type" : "number"
+          }
+        }
+      },
+      "PositionInfo" : {
+        "type" : "object",
+        "description" : "Position information",
+        "properties" : {
+          "symbol" : {
+            "type" : "string",
+            "description" : "Trading symbol",
+            "examples" : [ "BTC" ]
+          },
+          "quantity" : {
+            "type" : "number",
+            "description" : "Position quantity",
+            "examples" : [ 0.5 ]
+          },
+          "value" : {
+            "type" : "number",
+            "description" : "Position value",
+            "examples" : [ 26500.00 ]
+          }
+        }
+      },
+      "ProblemDetails" : {
+        "description" : "RFC 7807 Problem Details for HTTP APIs - standardized error response",
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "URI reference identifying the problem type",
+            "examples" : [ "https://api.quorumtrading.ai/problems/validation-error" ]
+          },
+          "title" : {
+            "type" : "string",
+            "description" : "Short, human-readable summary",
+            "examples" : [ "Validation Failed" ]
+          },
+          "status" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "HTTP status code",
+            "examples" : [ 400 ]
+          },
+          "detail" : {
+            "type" : "string",
+            "description" : "Human-readable explanation specific to this occurrence",
+            "examples" : [ "Version is required" ]
+          },
+          "instance" : {
+            "type" : "string",
+            "description" : "URI reference identifying the specific occurrence",
+            "examples" : [ "/api/v1/strategies" ]
+          },
+          "timestamp" : {
+            "description" : "Timestamp when the error occurred",
+            "type" : "string",
+            "examples" : [ "2025-01-20T10:30:00Z" ],
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "errors" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ValidationError"
+            },
+            "description" : "List of validation errors (present for 400 Bad Request responses)"
+          }
+        }
+      },
+      "SimulationResponse" : {
+        "description" : "Simulation response",
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "description" : "Simulation unique identifier",
+            "type" : "string",
+            "examples" : [ "550e8400-e29b-41d4-a716-446655440000" ],
+            "$ref" : "#/components/schemas/UUID"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Simulation name",
+            "examples" : [ "BTC Momentum Test Q1 2023" ]
+          },
+          "status" : {
+            "type" : "string",
+            "description" : "Simulation status",
+            "examples" : [ "COMPLETED" ],
+            "enum" : [ "PENDING", "RUNNING", "COMPLETED", "FAILED" ]
+          },
+          "strategyVersion" : {
+            "type" : "string",
+            "description" : "Strategy version used",
+            "examples" : [ "v1.0" ]
+          },
+          "startDate" : {
+            "description" : "Start timestamp",
+            "type" : "string",
+            "examples" : [ "2023-01-01T00:00:00Z" ],
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "endDate" : {
+            "description" : "End timestamp",
+            "type" : "string",
+            "examples" : [ "2023-12-31T23:59:59Z" ],
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "startTime" : {
+            "description" : "Simulation start time (alias for startDate)",
+            "type" : "string",
+            "examples" : [ "2023-01-01T00:00:00Z" ],
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "endTime" : {
+            "description" : "Simulation end time (alias for endDate)",
+            "type" : "string",
+            "examples" : [ "2023-12-31T23:59:59Z" ],
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "initialCapital" : {
+            "type" : "number",
+            "description" : "Initial capital amount",
+            "examples" : [ 100000 ]
+          },
+          "returnPercentage" : {
+            "type" : "number",
+            "format" : "double",
+            "description" : "Return percentage",
+            "examples" : [ 15.5 ]
+          },
+          "notes" : {
+            "type" : "string",
+            "description" : "User notes",
+            "examples" : [ "Testing momentum strategy on BTC" ]
+          },
+          "initialPortfolio" : {
+            "description" : "Initial portfolio state",
+            "type" : "object",
+            "$ref" : "#/components/schemas/PortfolioInfo"
+          },
+          "currentPortfolio" : {
+            "description" : "Current portfolio state (during/after simulation)",
+            "type" : "object",
+            "$ref" : "#/components/schemas/PortfolioInfo"
+          },
+          "progress" : {
+            "type" : "number",
+            "format" : "double",
+            "description" : "Progress percentage (0.0 to 1.0)",
+            "examples" : [ 0.75 ]
+          },
+          "createdAt" : {
+            "description" : "Creation timestamp",
+            "type" : "string",
+            "examples" : [ "2025-01-20T10:30:00Z" ],
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "startedAt" : {
+            "description" : "Actual start timestamp",
+            "type" : "string",
+            "examples" : [ "2025-01-20T10:30:05Z" ],
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "completedAt" : {
+            "description" : "Completion timestamp",
+            "type" : "string",
+            "examples" : [ "2025-01-20T10:35:00Z" ],
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "results" : {
+            "type" : "object",
+            "additionalProperties" : { },
+            "description" : "Simulation results (metrics, statistics, etc.)"
+          }
+        }
+      },
+      "SimulationStatus" : {
+        "type" : "string",
+        "enum" : [ "PENDING", "RUNNING", "COMPLETED", "FAILED" ]
+      },
+      "StatusUpdateRequest" : {
+        "description" : "Status update request",
+        "type" : "object",
+        "required" : [ "status" ],
+        "properties" : {
+          "status" : {
+            "description" : "New simulation status",
+            "type" : "string",
+            "$ref" : "#/components/schemas/SimulationStatus"
+          }
+        }
+      },
+      "StrategyResponse" : {
+        "description" : "Strategy response",
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Strategy database ID",
+            "examples" : [ 1 ]
+          },
+          "version" : {
+            "type" : "string",
+            "description" : "Version identifier",
+            "examples" : [ "v1.0" ]
+          },
+          "markdownContent" : {
+            "type" : "string",
+            "description" : "Markdown content of the strategy",
+            "examples" : [ "# My Strategy..." ]
+          },
+          "createdAt" : {
+            "description" : "Creation timestamp",
+            "type" : "string",
+            "examples" : [ "2025-01-20T10:30:00Z" ],
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "createdBy" : {
+            "type" : "string",
+            "description" : "Creator username",
+            "examples" : [ "system" ]
+          },
+          "notes" : {
+            "type" : "string",
+            "description" : "Optional notes",
+            "examples" : [ "Initial version" ]
+          }
+        }
+      },
+      "UUID" : {
+        "type" : "string",
+        "format" : "uuid",
+        "pattern" : "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+      },
+      "ValidationError" : {
+        "type" : "object",
+        "description" : "Validation error details",
+        "properties" : {
+          "field" : {
+            "type" : "string",
+            "description" : "Field name that failed validation",
+            "examples" : [ "version" ]
+          },
+          "message" : {
+            "type" : "string",
+            "description" : "Validation error message",
+            "examples" : [ "Version is required" ]
+          },
+          "rejectedValue" : {
+            "description" : "The value that was rejected",
+            "examples" : [ "" ]
+          }
+        }
+      }
+    }
+  },
+  "tags" : [ {
+    "name" : "Decisions",
+    "description" : "Agent decision history"
+  }, {
+    "name" : "Market Data",
+    "description" : "Historical market events"
+  }, {
+    "name" : "Portfolio",
+    "description" : "Portfolio snapshots"
+  }, {
+    "name" : "Simulations",
+    "description" : "Backtesting simulation management"
+  }, {
+    "name" : "Strategies",
+    "description" : "Trading strategy version management"
+  } ],
+  "paths" : {
+    "/api/v1/decisions/consensus" : {
+      "get" : {
+        "summary" : "List consensus decisions",
+        "description" : "Retrieves consensus decisions (aggregated from LLM agents) for a simulation, optionally filtered by time range and execution status",
+        "tags" : [ "Decisions" ],
+        "parameters" : [ {
+          "description" : "Filter by execution status (true = executed, false = not executed)",
+          "example" : true,
+          "required" : false,
+          "name" : "executed",
+          "in" : "query",
+          "schema" : {
+            "type" : "boolean"
+          }
+        }, {
+          "description" : "Start timestamp in ISO-8601 format",
+          "example" : "2023-01-01T00:00:00Z",
+          "required" : false,
+          "name" : "from",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Maximum number of decisions to return (1-1000)",
+          "example" : 100,
+          "required" : false,
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "description" : "Simulation unique identifier",
+          "example" : "550e8400-e29b-41d4-a716-446655440000",
+          "required" : true,
+          "name" : "simulationId",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "End timestamp in ISO-8601 format",
+          "example" : "2023-12-31T23:59:59Z",
+          "required" : false,
+          "name" : "to",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Consensus decisions retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConsensusDecisionsResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad request - missing required parameters or invalid format",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/llm" : {
+      "get" : {
+        "summary" : "List LLM decisions",
+        "description" : "Retrieves individual LLM agent decisions for a simulation, optionally filtered by time range and agent ID",
+        "tags" : [ "Decisions" ],
+        "parameters" : [ {
+          "description" : "Filter by specific agent ID",
+          "example" : "agent-001",
+          "required" : false,
+          "name" : "agentId",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Start timestamp in ISO-8601 format",
+          "example" : "2023-01-01T00:00:00Z",
+          "required" : false,
+          "name" : "from",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Maximum number of decisions to return (1-1000)",
+          "example" : 100,
+          "required" : false,
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "description" : "Simulation unique identifier",
+          "example" : "550e8400-e29b-41d4-a716-446655440000",
+          "required" : true,
+          "name" : "simulationId",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "End timestamp in ISO-8601 format",
+          "example" : "2023-12-31T23:59:59Z",
+          "required" : false,
+          "name" : "to",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "LLM decisions retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LLMDecisionsResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad request - missing required parameters or invalid format",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/market-data/collect" : {
+      "post" : {
+        "summary" : "Trigger market data collection",
+        "description" : "Manually triggers data collection from all enabled market data providers. Useful for testing and on-demand data ingestion.",
+        "tags" : [ "Market Data" ],
+        "parameters" : [ {
+          "description" : "Optional category filter (e.g., 'crypto', 'forex')",
+          "example" : "crypto",
+          "required" : false,
+          "name" : "category",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Data collection completed successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/market-data/events" : {
+      "get" : {
+        "summary" : "Query market events",
+        "description" : "Retrieves historical market events (price updates, news, Reddit posts) within a specified time range with optional filters",
+        "tags" : [ "Market Data" ],
+        "parameters" : [ {
+          "description" : "Filter by event type (PRICE_UPDATE, NEWS, REDDIT_POST)",
+          "example" : "PRICE_UPDATE",
+          "required" : false,
+          "name" : "eventType",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Start timestamp in ISO-8601 format",
+          "example" : "2023-01-01T00:00:00Z",
+          "required" : true,
+          "name" : "from",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Maximum number of events to return (1-1000)",
+          "example" : 100,
+          "required" : false,
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "description" : "Filter by data source",
+          "example" : "coinbase",
+          "required" : false,
+          "name" : "source",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Filter by trading symbol (e.g., BTC, ETH)",
+          "example" : "BTC",
+          "required" : false,
+          "name" : "symbol",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "End timestamp in ISO-8601 format",
+          "example" : "2023-12-31T23:59:59Z",
+          "required" : true,
+          "name" : "to",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Market events retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MarketEventsResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad request - missing required parameters or invalid format",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Unprocessable entity - time range exceeds 365 days or 'from' is after 'to'",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portfolios/snapshots" : {
+      "get" : {
+        "summary" : "Query portfolio snapshots",
+        "description" : "Retrieves historical portfolio snapshots for a simulation, showing portfolio state over time",
+        "tags" : [ "Portfolio" ],
+        "parameters" : [ {
+          "description" : "Start timestamp in ISO-8601 format",
+          "example" : "2023-01-01T00:00:00Z",
+          "required" : false,
+          "name" : "from",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Maximum number of snapshots to return (1-1000)",
+          "example" : 100,
+          "required" : false,
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "description" : "Simulation unique identifier",
+          "example" : "550e8400-e29b-41d4-a716-446655440000",
+          "required" : true,
+          "name" : "simulationId",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "End timestamp in ISO-8601 format",
+          "example" : "2023-12-31T23:59:59Z",
+          "required" : false,
+          "name" : "to",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Portfolio snapshots retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PortfolioSnapshotsResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad request - missing required parameters or invalid format",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/simulations" : {
+      "get" : {
+        "summary" : "List simulations",
+        "description" : "Retrieves all simulations, optionally filtered by status",
+        "tags" : [ "Simulations" ],
+        "parameters" : [ {
+          "description" : "Filter by simulation status (PENDING, RUNNING, COMPLETED, FAILED)",
+          "example" : "RUNNING",
+          "required" : false,
+          "name" : "status",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List of simulations retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/SimulationResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad request - invalid status value",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Create simulation",
+        "description" : "Creates a new backtesting simulation with specified strategy, time range, and initial portfolio",
+        "tags" : [ "Simulations" ],
+        "requestBody" : {
+          "description" : "Simulation creation request",
+          "content" : {
+            "application/json" : {
+              "examples" : {
+                "Example Simulation" : {
+                  "value" : {
+                    "name" : "BTC Momentum Test",
+                    "strategyVersion" : "v1.0",
+                    "startDate" : "2023-01-01T00:00:00Z",
+                    "endDate" : "2023-12-31T23:59:59Z",
+                    "initialPortfolio" : {
+                      "cash" : 100000,
+                      "positions" : [ {
+                        "symbol" : "BTC",
+                        "quantity" : 0.5
+                      } ]
+                    },
+                    "configuration" : {
+                      "maxPositionSize" : 0.3
+                    }
+                  }
+                }
+              },
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateSimulationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Simulation created successfully with Location header pointing to the new resource",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SimulationResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad request - validation failed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Strategy version not found",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/simulations/{id}" : {
+      "get" : {
+        "summary" : "Get simulation by ID",
+        "description" : "Retrieves a specific simulation by its unique identifier",
+        "tags" : [ "Simulations" ],
+        "parameters" : [ {
+          "description" : "Simulation unique identifier",
+          "example" : "550e8400-e29b-41d4-a716-446655440000",
+          "required" : true,
+          "name" : "id",
+          "in" : "path",
+          "schema" : {
+            "$ref" : "#/components/schemas/UUID"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Simulation retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SimulationResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Simulation not found",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Delete simulation",
+        "description" : "Deletes a simulation. Cannot delete a simulation that is currently running.",
+        "tags" : [ "Simulations" ],
+        "parameters" : [ {
+          "description" : "Simulation unique identifier",
+          "example" : "550e8400-e29b-41d4-a716-446655440000",
+          "required" : true,
+          "name" : "id",
+          "in" : "path",
+          "schema" : {
+            "$ref" : "#/components/schemas/UUID"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Simulation deleted successfully - no content returned"
+          },
+          "404" : {
+            "description" : "Simulation not found",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict - cannot delete a running simulation",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/simulations/{id}/start" : {
+      "post" : {
+        "summary" : "Start simulation execution",
+        "description" : "Starts the execution of a pending simulation. The simulation will run through the configured time range and evaluate trading decisions at the specified intervals.",
+        "tags" : [ "Simulations" ],
+        "parameters" : [ {
+          "description" : "Simulation unique identifier",
+          "example" : "550e8400-e29b-41d4-a716-446655440000",
+          "required" : true,
+          "name" : "id",
+          "in" : "path",
+          "schema" : {
+            "$ref" : "#/components/schemas/UUID"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Simulation started successfully and execution completed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SimulationResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Simulation or strategy not found",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict - simulation is not in PENDING status",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error or simulation execution failed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/simulations/{id}/status" : {
+      "patch" : {
+        "summary" : "Update simulation status",
+        "description" : "Updates the status of a simulation (e.g., to stop a running simulation)",
+        "tags" : [ "Simulations" ],
+        "parameters" : [ {
+          "description" : "Simulation ID",
+          "required" : true,
+          "name" : "id",
+          "in" : "path",
+          "schema" : {
+            "$ref" : "#/components/schemas/UUID"
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Status update request",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/StatusUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Status updated successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SimulationResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Simulation not found",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid status transition",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/strategies" : {
+      "get" : {
+        "summary" : "List all strategies",
+        "description" : "Retrieves all trading strategy versions available in the system",
+        "tags" : [ "Strategies" ],
+        "responses" : {
+          "200" : {
+            "description" : "List of strategies retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/StrategyResponse"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Create new strategy",
+        "description" : "Creates a new trading strategy version with markdown content",
+        "tags" : [ "Strategies" ],
+        "requestBody" : {
+          "description" : "Strategy creation request",
+          "content" : {
+            "application/json" : {
+              "examples" : {
+                "Example Strategy" : {
+                  "value" : {
+                    "version" : "v1.0",
+                    "markdownContent" : "# My Trading Strategy\n\nThis strategy focuses on momentum trading...",
+                    "notes" : "Initial version"
+                  }
+                }
+              },
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateStrategyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Strategy created successfully with Location header pointing to the new resource",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StrategyResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad request - validation failed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict - strategy version already exists",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/strategies/{version}" : {
+      "put" : {
+        "summary" : "Update strategy",
+        "description" : "Updates an existing trading strategy's content and notes. Version in request body must match the path parameter.",
+        "tags" : [ "Strategies" ],
+        "parameters" : [ {
+          "description" : "Strategy version identifier (e.g., v1.0, v2.0-alpha)",
+          "example" : "v1.0",
+          "required" : true,
+          "name" : "version",
+          "in" : "path",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Strategy update request",
+          "content" : {
+            "application/json" : {
+              "examples" : {
+                "Example Update" : {
+                  "value" : {
+                    "version" : "v1.0",
+                    "markdownContent" : "# Updated Strategy\n\nModified content...",
+                    "notes" : "Updated notes"
+                  }
+                }
+              },
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateStrategyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Strategy updated successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StrategyResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad request - validation failed or version mismatch",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Strategy version not found",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get" : {
+        "summary" : "Get strategy by version",
+        "description" : "Retrieves a specific trading strategy by its version identifier",
+        "tags" : [ "Strategies" ],
+        "parameters" : [ {
+          "description" : "Strategy version identifier (e.g., v1.0, v2.0-alpha)",
+          "example" : "v1.0",
+          "required" : true,
+          "name" : "version",
+          "in" : "path",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Strategy retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StrategyResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Strategy version not found",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Delete strategy",
+        "description" : "Deletes a trading strategy version. Note: Currently does not check for simulation references.",
+        "tags" : [ "Strategies" ],
+        "parameters" : [ {
+          "description" : "Strategy version identifier (e.g., v1.0, v2.0-alpha)",
+          "example" : "v1.0",
+          "required" : true,
+          "name" : "version",
+          "in" : "path",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Strategy deleted successfully - no content returned"
+          },
+          "404" : {
+            "description" : "Strategy version not found",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "info" : {
+    "title" : "QuorumTrading API",
+    "version" : "1.0.0",
+    "description" : "REST API and WebSocket streaming for QuorumTrading algorithmic trading platform. Provides endpoints for strategy management, backtesting simulations, market data queries, agent decision tracking, and portfolio monitoring. Real-time updates available via WebSocket subscriptions.",
+    "contact" : {
+      "name" : "QuorumTrading Team",
+      "email" : "support@quorumtrading.ai"
+    },
+    "license" : {
+      "name" : "Proprietary"
+    }
+  },
+  "servers" : [ {
+    "url" : "http://localhost:8080",
+    "description" : "Auto generated value"
+  }, {
+    "url" : "http://0.0.0.0:8080",
+    "description" : "Auto generated value"
+  } ]
+}

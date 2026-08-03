@@ -1,0 +1,18 @@
+# Code owners — review is REQUIRED from these owners for the paths below.
+#
+# This only has teeth when branch protection on `main` has "Require review from Code Owners"
+# enabled (see the repo's branch-protection settings). The file alone is advisory.
+#
+# Owner: personal maintainer handle (an org team like @COLARDYNIT/maintainers can replace this
+# later if the maintainer group grows).
+
+# CI/CD and repo automation — nobody changes how the project builds or releases without review.
+/.github/                 @frederikcolardyn
+
+# Licensing, contributor agreement, trademark, legal notices — owner-only.
+/LICENSE                  @frederikcolardyn
+/LICENSING.md             @frederikcolardyn
+/CLA.md                   @frederikcolardyn
+/TRADEMARK.md             @frederikcolardyn
+/NOTICE                   @frederikcolardyn
+/CONTRIBUTING.md          @frederikcolardyn

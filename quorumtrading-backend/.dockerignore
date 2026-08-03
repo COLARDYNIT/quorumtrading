@@ -1,0 +1,36 @@
+# Build context for the backend image (docker-compose.local.yml -> context: ./quorumtrading-backend,
+# dockerfile: quorumtrading-bootstrap/src/main/docker/Dockerfile.jvm).
+#
+# That Dockerfile starts with `COPY . .`, so without this file EVERYTHING here is shipped to the
+# Docker daemon and baked into the build stage — including `.env`, which is gitignored precisely
+# because it holds real broker credentials. The final image is multi-stage and only keeps
+# target/quarkus-app, so secrets never reached a distributable layer, but they did sit in the local
+# build cache, and a single-stage Dockerfile or a `docker save` of the build stage would have
+# published them. Keep secrets out of the context in the first place.
+#
+# Everything the build actually needs stays: the root pom, every module's pom + src, and the Maven
+# wrapper. The image runs `mvn` from the maven base image, and compiles from source — it never
+# reads a prebuilt target/.
+
+# Secrets. The reason this file exists.
+.env
+.env.*
+!.env.example
+
+# Local build output — 256 MB of it, and stale by definition: the image rebuilds from source.
+# Shipping it also risks a host-built artifact shadowing the one produced in the container.
+target/
+*/target/
+**/target/
+
+# Local tooling and editor noise
+.idea/
+*.iml
+.vscode/
+.DS_Store
+*.log
+
+# Never needed at build time
+**/.git
+**/.gitignore
+README.md

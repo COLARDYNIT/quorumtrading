@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN returning_user BOOLEAN NOT NULL DEFAULT false;

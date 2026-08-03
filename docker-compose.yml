@@ -1,0 +1,123 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: quorumtrading-postgres
+    environment:
+      POSTGRES_DB: quorumtrading
+      POSTGRES_USER: quorumtrading
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev-password}
+    ports:
+      # Host port is 55432 to avoid conflicts with other local postgres instances
+      # (other local Postgres instances commonly squat on 5432/5433).
+      # Override via QT_POSTGRES_PORT env var if needed.
+      - "${QT_POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quorumtrading"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: quorumtrading-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend (uncomment when ready)
+  # backend:
+  #   build:
+  #     context: ./quorumtrading-backend
+  #     dockerfile: src/main/docker/Dockerfile.jvm
+  #   container_name: quorumtrading-backend
+  #   environment:
+  #     QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/quorumtrading
+  #     QUARKUS_DATASOURCE_USERNAME: quorumtrading
+  #     QUARKUS_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-dev-password}
+  #     QUARKUS_REDIS_HOSTS: redis://redis:6379
+  #     OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+
+  # Frontend (uncomment when ready)
+  # frontend:
+  #   build:
+  #     context: ./quorumtrading-frontend
+  #     dockerfile: Dockerfile
+  #   container_name: quorumtrading-frontend
+  #   environment:
+  #     VITE_API_URL: http://localhost:8080
+  #     VITE_WS_URL: ws://localhost:8080/ws/stream
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - backend
+  #   volumes:
+  #     - ./quorumtrading-frontend/src:/app/src
+  #     - /app/node_modules
+
+  # ========================================
+  # Monitoring Stack (Prometheus + Grafana)
+  # ========================================
+  # Start with: docker-compose up -d prometheus grafana
+  # Access Grafana: http://localhost:3001 (admin/admin)
+  # Access Prometheus: http://localhost:9090
+
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: quorumtrading-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: quorumtrading-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:

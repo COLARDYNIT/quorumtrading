@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Java smell detection for the backend.
+
+  This exists because SpotBugs cannot analyse this codebase: it reads bytecode, and its BCEL
+  dependency does not understand Java 25 class files (major version 69) — every module reports
+  "No classes found to analyze". PMD reads SOURCE, so the class file version is irrelevant, and
+  it parses Java 25 here with zero errors. Revisit SpotBugs + FindSecBugs once BCEL ships Java 25
+  support; PMD has no equivalent of FindSecBugs' taint analysis, so the security half of that
+  pairing is still missing.
+
+  Curated rather than wholesale. The point is to catch defects and unmaintainable complexity, not
+  to litigate formatting: a ruleset that argues about brace placement gets switched off within a
+  month, taking the useful rules with it. Categories are included and then individually pruned
+  where a rule fights a deliberate convention in this codebase.
+-->
+<ruleset name="quorumtrading"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0
+                             https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>Defect and complexity rules for the QuorumTrading backend.</description>
+
+    <!-- Genuine bug patterns: the closest available substitute for SpotBugs. -->
+    <rule ref="category/java/errorprone.xml">
+        <!-- Records and DTOs legitimately carry many fields. -->
+        <exclude name="DataflowAnomalyAnalysis"/>
+        <!-- Null checks against a literal are a readability preference, not a defect. -->
+        <exclude name="AvoidLiteralsInIfCondition"/>
+        <!-- Domain code uses meaningful constants; PMD flags every string used twice. -->
+        <exclude name="AvoidDuplicateLiterals"/>
+        <!-- JPA entities and reconstitution builders need no-arg/permissive constructors. -->
+        <exclude name="MissingSerialVersionUID"/>
+        <!-- Nothing here is serialized through ObjectOutputStream; 7 findings, all false. -->
+        <exclude name="NonSerializableClass"/>
+        <!-- `field` next to `field()` is the accessor convention this codebase uses throughout;
+             37 findings, none of them a defect. -->
+        <exclude name="AvoidFieldNameMatchingMethodName"/>
+        <!-- Assigning null to release a reference or reset optional state is deliberate here;
+             36 findings and no way to distinguish the careless ones. -->
+        <exclude name="NullAssignment"/>
+    </rule>
+
+    <!-- Multi-threading correctness: schedulers, async executors, the LLM router. -->
+    <rule ref="category/java/multithreading.xml">
+        <!-- Quarkus manages the executors; DoNotUseThreads fires on every ManagedExecutor use. -->
+        <exclude name="DoNotUseThreads"/>
+        <exclude name="AvoidSynchronizedAtMethodLevel"/>
+        <!-- Fires on every `new HashMap<>()` regardless of whether it is ever shared across
+             threads: 164 findings, overwhelmingly in request-scoped or local maps. A rule that
+             is wrong four times in five trains people to ignore the whole report. -->
+        <exclude name="UseConcurrentHashMap"/>
+        <!-- volatile is used correctly here for scheduler stop-flags and cached config. -->
+        <exclude name="AvoidUsingVolatile"/>
+    </rule>
+
+    <!-- Complexity, which is the "is this still maintainable" half of the gate. Sized to the
+         code that exists rather than to PMD's defaults, so the baseline stays readable. -->
+    <rule ref="category/java/design.xml/CyclomaticComplexity">
+        <properties>
+            <property name="classReportLevel" value="120"/>
+            <property name="methodReportLevel" value="20"/>
+        </properties>
+    </rule>
+    <rule ref="category/java/design.xml/CognitiveComplexity">
+        <properties>
+            <property name="reportLevel" value="25"/>
+        </properties>
+    </rule>
+    <rule ref="category/java/design.xml/NPathComplexity"/>
+    <rule ref="category/java/design.xml/ExcessiveParameterList">
+        <properties>
+            <!-- Reconstitution factories and commands legitimately take many parameters. -->
+            <property name="minimum" value="14"/>
+        </properties>
+    </rule>
+    <rule ref="category/java/design.xml/CouplingBetweenObjects">
+        <properties>
+            <property name="threshold" value="30"/>
+        </properties>
+    </rule>
+
+    <!-- Practices that produce defects rather than debate: ignored return values, empty
+         catch blocks, resources that are never closed. -->
+    <rule ref="category/java/bestpractices.xml/UnusedPrivateField"/>
+    <rule ref="category/java/bestpractices.xml/UnusedPrivateMethod"/>
+    <rule ref="category/java/bestpractices.xml/UnusedLocalVariable"/>
+    <rule ref="category/java/bestpractices.xml/UnusedFormalParameter"/>
+    <rule ref="category/java/bestpractices.xml/PreserveStackTrace"/>
+    <rule ref="category/java/bestpractices.xml/AvoidReassigningParameters"/>
+    <rule ref="category/java/bestpractices.xml/CheckResultSet"/>
+    <rule ref="category/java/bestpractices.xml/UnusedAssignment"/>
+
+</ruleset>

@@ -1,0 +1,90 @@
+# Java / Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.jar
+*.war
+*.ear
+*.class
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.properties
+
+# Quarkus
+.quarkus/
+
+# Generated OpenAPI spec
+quorumtrading-backend/quorumtrading-bootstrap/openapi-spec/
+
+# Node / NPM
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.pnpm-debug.log*
+dist/
+build/
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Environment variables — .env* catches every variant (.env.production, backups, …);
+# only the checked-in examples are allowed through
+.env
+.env*
+!.env*.example
+.env.local
+.env.*.local
+*.env
+
+# Per-developer Claude Code settings
+.claude/settings.local.json
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Git worktrees
+.worktrees/
+
+# playwright
+.playwright-mcp/
+
+# Next.js build output (stray)
+.next/
+
+# FUT testing screenshots
+fut-*.png
+*.png
+
+# local artifacts
+backups/
+test-results/

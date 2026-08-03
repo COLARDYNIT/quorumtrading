@@ -1,0 +1,41 @@
+# Dependency hygiene — weekly update PRs per ecosystem, grouped to keep PR noise low.
+# Security updates are always opened immediately regardless of the schedule.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /quorumtrading-backend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      quarkus:
+        patterns:
+          - "io.quarkus*"
+      maven-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /quorumtrading-frontend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      # TypeScript 7.x is the Go-native compiler and drops the JS Compiler API
+      # (lib/typescript.js). Next.js's TS integration and typescript-eslint both
+      # depend on that API, so a 7.x bump cannot build (see closed PR #45).
+      # Revisit once Next.js supports TS 7 (vercel/next.js discussion #95633) —
+      # Microsoft expects a stable programmatic API in TS 7.1.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
