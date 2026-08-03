@@ -8,6 +8,13 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    ignore:
+      # Unleash is pinned to 8.4.0, the last pure-Java release: 9+ evaluates through
+      # a Rust core loaded via JNA, which breaks the GraalVM native image. No CI gate
+      # runs -Pnative, so a bump goes green here and fails on the way to production.
+      # See CLAUDE.md "Runtime Feature Flags".
+      - dependency-name: "io.getunleash:unleash-client-java"
+        versions: [">=9.0.0"]
     groups:
       quarkus:
         patterns:
