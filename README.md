@@ -8,6 +8,10 @@ markdown, backtest it against historical data (every agent's full reasoning is p
 can scrub through time and see *why* each call was made), and only then decide whether to let it
 trade paper or real money through your own broker account.
 
+<p align="center">
+  <img src="docs/promo.gif" alt="Demo: two commands to boot the stack, then a Claude conversation over MCP — create three AAPL strategies, backtest 2025, compare against buy & hold, and open the winning run in the browser." width="800">
+</p>
+
 The whole platform is **agent-native**: it ships an [MCP](https://modelcontextprotocol.io) server
 that exposes everything — strategies, backtests, results — so you can drive it all from
 Claude Code or any MCP client, without touching the web UI. Point it at a local LLM you already
