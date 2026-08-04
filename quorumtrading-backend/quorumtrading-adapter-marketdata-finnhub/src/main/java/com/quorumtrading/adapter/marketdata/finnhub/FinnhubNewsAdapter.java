@@ -81,7 +81,7 @@ public class FinnhubNewsAdapter implements MarketDataPort {
             return events;
 
         } catch (Exception e) {
-            logger.error("Failed to fetch Finnhub news", e);
+            logger.warnf(e, "Failed to fetch Finnhub news — check FINNHUB_API_KEY if this persists; continuing without news");
             return Collections.emptyList();
         }
     }

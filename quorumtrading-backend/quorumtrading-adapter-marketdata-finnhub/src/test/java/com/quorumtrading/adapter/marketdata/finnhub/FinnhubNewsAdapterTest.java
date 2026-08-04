@@ -229,4 +229,31 @@ class FinnhubNewsAdapterTest {
         assertTrue(events.isEmpty());
         verifyNoInteractions(restClient);
     }
+
+    @Test
+    void shouldReturnEmptyListAndKeepRunningWhenTheFetchFails() {
+        // Given — the provider is down, or the key is revoked
+        when(restClient.getMarketNews(eq("general"), eq(apiKey)))
+            .thenThrow(new RuntimeException("HTTP 401 from Finnhub"));
+
+        // When
+        List<MarketEvent> events = adapter.fetchLatestData();
+
+        // Then — news degrades gracefully, it never breaks the collection pass
+        assertNotNull(events);
+        assertTrue(events.isEmpty());
+    }
+
+    @Test
+    void shouldSkipWithoutCallingFinnhubWhenKeyIsTheNotConfiguredPlaceholder() {
+        // Given — a fresh keyless install boots with the literal placeholder
+        adapter = new FinnhubNewsAdapter(restClient, "not-configured", true);
+
+        // When
+        List<MarketEvent> events = adapter.fetchLatestData();
+
+        // Then
+        assertTrue(events.isEmpty());
+        verifyNoInteractions(restClient);
+    }
 }
