@@ -64,7 +64,8 @@ When it's ready, the backend prints a banner in the logs:
 ======================================================================
 ```
 
-If you scrolled past it: `docker compose -f docker-compose.local.yml logs backend | grep -A10 "MCP ready"`.
+If you scrolled past it: `docker compose -f docker-compose.local.yml logs backend | grep -A10 "MCP ready"` —
+or read the token straight from the container: `docker exec qt-local-backend cat /work/.qt-local/mcp-token`.
 
 ## 2. Connect Claude Code
 

@@ -78,6 +78,14 @@ claude mcp add --transport http quorumtrading http://localhost:8085/mcp \
   --header "Authorization: Bearer qt_..."
 ```
 
+Missed the banner, or started the stack detached? The token is retrievable any time:
+
+```bash
+docker compose -f docker-compose.local.yml logs backend | grep -A10 "MCP ready"
+# or read it straight from the container:
+docker exec qt-local-backend cat /work/.qt-local/mcp-token
+```
+
 From there, ask your agent to backfill price data, draft a strategy and backtest it — or do the
 same in the browser. Try prompts like *"backfill 18 months of BTC and show me the indicators"* or
 *"create a weekly BTC momentum strategy and backtest it over the last 6 months with $10k"* — more
