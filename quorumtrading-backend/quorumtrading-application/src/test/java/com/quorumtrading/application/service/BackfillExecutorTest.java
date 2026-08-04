@@ -81,6 +81,10 @@ class BackfillExecutorTest {
             return mockProvider.getSupportedFeatures().contains(f);
         });
         lenient().when(mockProvider.getRateLimit()).thenReturn(RateLimit.perMinute(200));
+        // Usable by default: enabled + credentialed (the executor now skips providers
+        // that are switched off or hold no key, instead of calling them).
+        lenient().when(mockProvider.isEnabled()).thenReturn(true);
+        lenient().when(mockProvider.isConfigured()).thenReturn(true);
 
         // Set up CDI Instance to return the mock provider
         lenient().when(marketDataPorts.isUnsatisfied()).thenReturn(false);
@@ -205,6 +209,32 @@ class BackfillExecutorTest {
 
         // A successful fill feeds back as an observed-fetch (may lower the horizon)
         verify(dataHorizonService).recordObservedFetch(any(), eq(EventType.PRICE), any());
+    }
+
+    @Test
+    void execute_uncredentialedProvider_shouldSkipWithKeyMessageAndNeverTouchHorizon() {
+        // Given: the only stock-capable provider holds no credentials (keyless install)
+        when(mockProvider.isConfigured()).thenReturn(false);
+
+        // When
+        executor.execute(job);
+
+        // Then: the job completes with the gap SKIPPED — not FAILED, not NO_DATA
+        assertThat(job.getStatus()).isEqualTo(BackfillStatus.COMPLETED);
+
+        GapProgress lastGap = captureLastGapProgress();
+        assertThat(lastGap.status()).isEqualTo(GapProgress.GapStatus.SKIPPED);
+        assertThat(lastGap.errorMessage())
+            .contains("No market-data credentials are configured")
+            .contains("alpaca")
+            .contains("Set the API key");
+
+        // The provider is never called — no outbound request without credentials
+        verify(mockProvider, never()).fetchDataInRange(any(), any(), any(), any(), any());
+
+        // And crucially: the horizon cache is never "raised" from a skipped gap. That
+        // feedback is what painted keyless installs with a fake permanent data floor.
+        verify(dataHorizonService, never()).recordNoData(any(), any(), any());
     }
 
     private static MarketEvent priceEvent(int dayOfMonth) {

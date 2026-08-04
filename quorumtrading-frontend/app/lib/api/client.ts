@@ -80,6 +80,7 @@ import {
   BackfillRequest,
   BackfillResponse,
   DataHorizonResponse,
+  MarketDataStatusResponse,
 } from '../types/dataAvailability';
 import {
   BrokerAccount as BrokerAccountResponse,
@@ -848,6 +849,17 @@ export const apiClient = {
         `/data-availability/horizon?${queryParams}`
       );
     },
+
+    /**
+     * Get the deployment's market-data provider status: which candle providers
+     * exist, whether each is enabled + credentialed, and whether stocks / crypto
+     * have any usable provider at all. Same use case as the MCP tool
+     * get_market_data_status.
+     *
+     * GET /api/v1/data-availability/market-data-status
+     */
+    getMarketDataStatus: () =>
+      apiFetch<MarketDataStatusResponse>('/data-availability/market-data-status'),
   },
 
   /**

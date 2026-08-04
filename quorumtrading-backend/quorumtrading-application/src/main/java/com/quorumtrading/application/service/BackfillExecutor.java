@@ -148,10 +148,17 @@ public class BackfillExecutor {
             MarketDataGap gap = gaps.get(i);
             GapProgress currentGapProgress;
 
-            // Find ALL providers that can handle this gap (for fallback)
-            List<MarketDataPort> providers = findProvidersForGap(gap);
+            // Find ALL providers that can handle this gap (for fallback). Only usable
+            // (enabled + credentialed) providers are worth an outbound request: an
+            // uncredentialed adapter returns an empty list without error, which used to
+            // be recorded as NO_DATA and fed back into the horizon cache — turning a
+            // missing API key into "before provider coverage — permanently unavailable".
+            List<MarketDataPort> featureMatching = findProvidersForGap(gap);
+            List<MarketDataPort> providers = featureMatching.stream()
+                .filter(p -> p.isEnabled() && p.isConfigured())
+                .toList();
             if (providers.isEmpty()) {
-                String skipReason = buildNoProviderMessage(gap);
+                String skipReason = buildSkipReason(gap, featureMatching);
                 LOG.warnf("No provider available for gap: %s - %s", gap, skipReason);
 
                 // Create skipped gap progress with detailed reason
@@ -409,6 +416,32 @@ public class BackfillExecutor {
             LOG.debugf("Horizon no-data feedback failed for %s %s: %s",
                 gap.symbol().ticker(), gap.dataType(), e.getMessage());
         }
+    }
+
+    /**
+     * Why this gap is being skipped: no provider supports it at all, or providers
+     * exist but none is usable (enabled + credentialed).
+     */
+    private String buildSkipReason(MarketDataGap gap, List<MarketDataPort> featureMatching) {
+        return featureMatching.isEmpty()
+            ? buildNoProviderMessage(gap)
+            : buildNoCredentialedProviderMessage(featureMatching);
+    }
+
+    /**
+     * Skip reason when providers could serve this gap but none holds credentials.
+     * Same copy style as {@code BackFillTickerPriceDataService}'s credentials
+     * diagnosis — the one actionable fact (set a key) said first.
+     */
+    private String buildNoCredentialedProviderMessage(List<MarketDataPort> featureMatching) {
+        String names = featureMatching.stream()
+            .map(MarketDataPort::getProviderName)
+            .collect(java.util.stream.Collectors.joining(", "));
+        return String.format(
+            "No market-data credentials are configured. %d provider(s) could serve this gap (%s)"
+                + " but none of them has credentials, so it was skipped. Set the API key for one"
+                + " of them and restart the backend. Crypto needs no key at all.",
+            featureMatching.size(), names);
     }
 
     /**

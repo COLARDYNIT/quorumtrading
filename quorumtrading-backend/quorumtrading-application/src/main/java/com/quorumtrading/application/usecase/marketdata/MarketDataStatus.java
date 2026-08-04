@@ -22,6 +22,26 @@ public record MarketDataStatus(
 ) {
 
     /**
+     * One-line human summary of what works and what is missing. Lives here — not in a
+     * driving adapter — so the MCP tool and the REST endpoint render the exact same
+     * diagnosis instead of drifting apart.
+     */
+    public String hint() {
+        if (cryptoUsable && stockUsable) {
+            return "Both crypto and stock candles have a usable provider.";
+        }
+        if (cryptoUsable) {
+            return "Crypto candles are served (keyless). No usable stock provider — stock backfills "
+                + "will return nothing until one is enabled and given a key.";
+        }
+        if (stockUsable) {
+            return "Stock candles are served. No usable crypto provider on this deployment.";
+        }
+        return "No price provider is usable, so every backfill will return nothing. This is a "
+            + "configuration problem, not a coverage problem — do not go looking for a different ticker.";
+    }
+
+    /**
      * One provider's state.
      *
      * <p>{@code enabled} and {@code credentialed} are deliberately separate: Saxo holds the
@@ -48,6 +68,19 @@ public record MarketDataStatus(
         /** Whether this provider could serve a request right now, before any live call. */
         public boolean usable() {
             return enabled && credentialed;
+        }
+
+        /** What this provider's state means for the operator — shared by MCP and REST. */
+        public String detail() {
+            if (!enabled) {
+                return "Switched off for this deployment — it is never called and never counted among "
+                    + "the providers a failed backfill says it tried.";
+            }
+            if (!credentialed) {
+                return "Switched on but holding no credentials, so it is skipped rather than called. "
+                    + "Set its API key and restart the backend.";
+            }
+            return "Enabled and credentialed.";
         }
     }
 
