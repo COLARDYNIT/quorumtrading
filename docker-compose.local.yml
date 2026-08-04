@@ -128,7 +128,7 @@ services:
       # bound to 127.0.0.1 through host.docker.internal, so loopback is enough on macOS and
       # Windows; on Linux the bridge must bind a routable address, and then it should not be
       # left unauthenticated.
-      QT_LLM_LOCALHTTP_API_KEY: ${QT_LLM_LOCALHTTP_API_KEY:-}
+      QT_LLM_LOCALHTTP_API_KEY: ${QT_LLM_LOCALHTTP_API_KEY:-not-configured}
       # Local engines (small models, CLI bridges) can be slow per call; give them more room than
       # the 120s default so a slow-but-successful generation isn't recorded as a failed agent.
       QUORUMTRADING_LLM_LOCALHTTP_TIMEOUT: ${QT_LLM_LOCALHTTP_TIMEOUT:-300s}

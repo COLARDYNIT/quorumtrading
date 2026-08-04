@@ -41,7 +41,7 @@ public class FinnhubFinancialDataAdapter implements FinancialDataFetcher {
 
     @Override
     public Optional<FinancialMetrics> fetchFinancialMetrics(Symbol symbol) {
-        if (apiKey.isBlank() || symbol.type() != InvestmentType.STOCK) {
+        if (apiKey.isBlank() || "not-configured".equals(apiKey) || symbol.type() != InvestmentType.STOCK) {
             return Optional.empty();
         }
 
