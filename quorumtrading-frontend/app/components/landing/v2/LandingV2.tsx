@@ -8,6 +8,7 @@ import { Act2CouncilPanel } from './Act2CouncilPanel';
 import { Act3StrategyPanel } from './Act3StrategyPanel';
 import { Act4BacktestPanel } from './Act4BacktestPanel';
 import { Act5GoLiveSection } from './Act5GoLiveSection';
+import { Act6OwnItPanel } from './Act6OwnItPanel';
 import { FooterCTAV2 } from './FooterCTAV2';
 import { LandingFooterV2 } from './LandingFooterV2';
 
@@ -33,6 +34,7 @@ export function LandingV2() {
       <Act3StrategyPanel />
       <Act4BacktestPanel />
       <Act5GoLiveSection />
+      <Act6OwnItPanel />
       <FooterCTAV2 />
       <LandingFooterV2 />
     </Page>
