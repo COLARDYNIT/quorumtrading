@@ -15,7 +15,7 @@
     <description>Stripe payment adapter for processing budget top-ups</description>
 
     <properties>
-        <stripe.version>33.1.1</stripe.version>
+        <stripe.version>33.4.0</stripe.version>
     </properties>
 
     <dependencies>

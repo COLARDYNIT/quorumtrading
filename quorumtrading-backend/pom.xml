@@ -48,7 +48,7 @@
 
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-        <quarkus.platform.version>3.37.4</quarkus.platform.version>
+        <quarkus.platform.version>3.39.1</quarkus.platform.version>
 
         <jandex.version>3.6.0</jandex.version>
         <wiremock.version>3.13.2</wiremock.version>
@@ -303,7 +303,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.27.0</version>
+                <version>3.28.0</version>
                 <configuration>
                     <rulesets>
                         <ruleset>${maven.multiModuleProjectDirectory}/pmd-ruleset.xml</ruleset>
@@ -320,7 +320,7 @@
                     <excludeRoots>
                         <excludeRoot>${project.build.directory}/generated-sources</excludeRoot>
                     </excludeRoots>
-                    <!-- No <targetJdk>: 3.27.0 validates it against a fixed list that stops short
+                    <!-- No <targetJdk>: 3.28.0 validates it against a fixed list that stops short
                          of 25 and fails the build outright. Left unset, PMD takes the language
                          level from maven.compiler.release and parses Java 25 with no errors. -->
                 </configuration>
