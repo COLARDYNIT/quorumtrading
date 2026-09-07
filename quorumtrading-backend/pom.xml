@@ -48,14 +48,14 @@
 
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-        <quarkus.platform.version>3.37.4</quarkus.platform.version>
+        <quarkus.platform.version>3.39.2</quarkus.platform.version>
 
         <jandex.version>3.6.0</jandex.version>
         <wiremock.version>3.13.2</wiremock.version>
         <assertj.version>3.27.7</assertj.version>
 
-        <compiler-plugin.version>3.15.0</compiler-plugin.version>
-        <surefire-plugin.version>3.5.6</surefire-plugin.version>
+        <compiler-plugin.version>3.16.0</compiler-plugin.version>
+        <surefire-plugin.version>3.6.0</surefire-plugin.version>
 
         <!-- Set to false only to regenerate pmd-baseline.properties; see the maven-pmd-plugin
              configuration below and scripts/generate-pmd-baseline.sh. -->
@@ -303,7 +303,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.27.0</version>
+                <version>3.28.0</version>
                 <configuration>
                     <rulesets>
                         <ruleset>${maven.multiModuleProjectDirectory}/pmd-ruleset.xml</ruleset>
@@ -320,7 +320,7 @@
                     <excludeRoots>
                         <excludeRoot>${project.build.directory}/generated-sources</excludeRoot>
                     </excludeRoots>
-                    <!-- No <targetJdk>: 3.27.0 validates it against a fixed list that stops short
+                    <!-- No <targetJdk>: 3.28.0 validates it against a fixed list that stops short
                          of 25 and fails the build outright. Left unset, PMD takes the language
                          level from maven.compiler.release and parses Java 25 with no errors. -->
                 </configuration>
