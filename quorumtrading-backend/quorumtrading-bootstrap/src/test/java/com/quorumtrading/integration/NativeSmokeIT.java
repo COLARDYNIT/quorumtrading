@@ -99,6 +99,41 @@ class NativeSmokeIT {
     }
 
     @Test
+    @DisplayName("feature flags evaluate in the packaged artifact")
+    void featureFlagsAreEvaluated() {
+        // Regression cover for the outage of 2026-08-03. The Unleash SDK is deferred to runtime
+        // initialization (see quarkus.native.additional-build-args), which moves its static
+        // initializers into the running binary — where a root-level classpath resource the SDK
+        // reads, app.properties, only exists if it was explicitly embedded. It was not, so this
+        // threw ExceptionInInitializerError and every flag-gated endpoint answered 500 while the
+        // rest of the API stayed healthy.
+        //
+        // Evaluation is lazy: the bean is @ApplicationScoped and nothing constructs it until a
+        // flag is first read. No other endpoint in this class touches one, which is precisely why
+        // a smoke test that already ran against the native binary sailed past the defect.
+        given()
+        .when()
+            .get("/api/v1/features")
+        .then()
+            .statusCode(200)
+            .body("features", notNullValue())
+            .body("features", hasKey("challenges"))
+            .body("features", hasKey("market-research"));
+    }
+
+    @Test
+    @DisplayName("a flag-gated endpoint answers, on or off, but never 500")
+    void gatedEndpointDoesNotFailClosedWithAnError() {
+        // 200 when the challenges flag is on, 403 when it is off — both are the gate working.
+        // Only a 5xx means evaluation itself broke, which is the failure this guards.
+        given()
+        .when()
+            .get("/api/v1/challenges")
+        .then()
+            .statusCode(not(500));
+    }
+
+    @Test
     @DisplayName("a chat session can be created and read back")
     void chatSessionSurvivesTheRoundTrip() {
         String session = freshUserSession();

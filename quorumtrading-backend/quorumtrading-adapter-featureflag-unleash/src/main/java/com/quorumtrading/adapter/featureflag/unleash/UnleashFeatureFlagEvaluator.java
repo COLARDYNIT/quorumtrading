@@ -51,26 +51,46 @@ public class UnleashFeatureFlagEvaluator implements FeatureFlagEvaluationPort {
 
     @PostConstruct
     void init() {
-        UnleashConfig config = UnleashConfig.builder()
-            .appName(APP_NAME)
-            .instanceId(APP_NAME + "-" + profile)
-            .environment(profile)
-            .unleashAPI(UNUSED_API_URL)
-            .apiKey(UNUSED_API_KEY)
-            .disableMetrics()
-            .build();
-        this.unleash = new DefaultUnleash(config, toggleSource);
-        LOG.debugf("Unleash evaluation initialised for environment '%s' with local definitions", profile);
+        try {
+            UnleashConfig config = UnleashConfig.builder()
+                .appName(APP_NAME)
+                .instanceId(APP_NAME + "-" + profile)
+                .environment(profile)
+                .unleashAPI(UNUSED_API_URL)
+                .apiKey(UNUSED_API_KEY)
+                .disableMetrics()
+                .build();
+            this.unleash = new DefaultUnleash(config, toggleSource);
+            LOG.debugf("Unleash evaluation initialised for environment '%s' with local definitions", profile);
+        } catch (RuntimeException | LinkageError e) {
+            // A bean that cannot be constructed makes every gated endpoint answer 500 — the
+            // product disappears because the machinery that decides which parts of it are switched
+            // on is broken. Serving the profile defaults is strictly better, so record the failure
+            // loudly and let isEnabled fall back.
+            LOG.errorf(e, "Unleash could not be initialised; every feature flag falls back to its"
+                + " profile default until this is fixed");
+            this.unleash = null;
+        }
     }
 
     @Override
     public boolean isEnabled(Feature feature, FeatureFlagContext context, boolean fallback) {
+        Unleash client = this.unleash;
+        if (client == null) {
+            return fallback;
+        }
         try {
-            return unleash.isEnabled(feature.flagName(), toUnleashContext(context), fallback);
-        } catch (RuntimeException e) {
+            return client.isEnabled(feature.flagName(), toUnleashContext(context), fallback);
+        } catch (RuntimeException | LinkageError e) {
             // Evaluation must never be the reason a request fails. Falling back to the profile
             // default keeps a production feature on if the flag store is unreachable, rather than
             // turning the product off because of an infrastructure problem.
+            //
+            // LinkageError as well as RuntimeException: the failure that took production down was
+            // ExceptionInInitializerError out of a static initializer inside the SDK, surfacing on
+            // every later call as NoClassDefFoundError. Both are Errors, and a
+            // RuntimeException-only catch let them straight through to a 500. Narrower than
+            // catching Throwable, which would swallow OutOfMemoryError.
             LOG.warnf(e, "Feature flag '%s' could not be evaluated; falling back to %s",
                 feature.flagName(), fallback);
             return fallback;

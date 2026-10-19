@@ -146,6 +146,7 @@ export function LandingNavV2() {
           <Link href="/strategies/public">Strategies</Link>
           <a href="#evidence">Backtests</a>
           <a href="#trust">Go live</a>
+          <a href="#own">Open source</a>
         </Links>
         <Actions>
           {signedIn ? (
