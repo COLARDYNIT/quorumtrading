@@ -16,6 +16,7 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @ApplicationScoped
 public class FinnhubNewsAdapter implements MarketDataPort {
@@ -25,6 +26,7 @@ public class FinnhubNewsAdapter implements MarketDataPort {
     private final FinnhubRestClient restClient;
     private final String apiKey;
     private final boolean enabled;
+    private final AtomicBoolean missingKeyReported = new AtomicBoolean();
 
     @Inject
     public FinnhubNewsAdapter(
@@ -34,6 +36,29 @@ public class FinnhubNewsAdapter implements MarketDataPort {
         this.restClient = restClient;
         this.apiKey = apiKey;
         this.enabled = enabled;
+    }
+
+    /**
+     * True when no usable key is configured. The WARN fires once per adapter instance: the key
+     * only changes with a redeploy, and repeating it on every 5-minute collection tick buried the
+     * real warnings in prod (8,644 lines in 30 days). Later calls log at DEBUG.
+     */
+    private boolean apiKeyMissing() {
+        if (apiKey != null && !apiKey.isBlank() && !"not-configured".equals(apiKey)) {
+            return false;
+        }
+        if (missingKeyReported.compareAndSet(false, true)) {
+            logger.warn("Finnhub API key not configured (FINNHUB_API_KEY): Finnhub news collection is "
+                    + "skipped. Reported once; set the key, or FINNHUB_NEWS_ENABLED=false to silence this.");
+        } else {
+            logger.debug("Finnhub API key not configured, skipping news collection");
+        }
+        return true;
+    }
+
+    /** Whether the missing-key WARN has been emitted (it is emitted at most once). */
+    boolean missingKeyReported() {
+        return missingKeyReported.get();
     }
 
     @Override
@@ -59,8 +84,7 @@ public class FinnhubNewsAdapter implements MarketDataPort {
             return Collections.emptyList();
         }
 
-        if (apiKey == null || apiKey.isBlank() || "not-configured".equals(apiKey)) {
-            logger.warn("Finnhub API key not configured, skipping news collection");
+        if (apiKeyMissing()) {
             return Collections.emptyList();
         }
 
@@ -102,8 +126,7 @@ public class FinnhubNewsAdapter implements MarketDataPort {
             return Collections.emptyList();
         }
 
-        if (apiKey == null || apiKey.isBlank() || "not-configured".equals(apiKey)) {
-            logger.warn("Finnhub API key not configured, skipping news collection");
+        if (apiKeyMissing()) {
             return Collections.emptyList();
         }
 

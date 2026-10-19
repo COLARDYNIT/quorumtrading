@@ -3,6 +3,7 @@ package com.quorumtrading.application.service;
 import com.quorumtrading.application.port.out.MarketEventRepository;
 import com.quorumtrading.model.enums.EventType;
 import com.quorumtrading.model.enums.InvestmentType;
+import com.quorumtrading.model.service.PriceLookbackWindow;
 import com.quorumtrading.model.marketdata.MarketEvent;
 import com.quorumtrading.model.valueobject.Money;
 import com.quorumtrading.model.valueobject.Symbol;
@@ -11,7 +12,6 @@ import org.jboss.logging.Logger;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,13 +29,18 @@ import java.util.stream.Collectors;
  *
  * <p>No fallbacks: a symbol with no price event in the look-back window is simply absent from
  * the returned map, rather than being priced at cost basis and presented as a market value.</p>
+ *
+ * <p>The look-back window is per asset universe ({@link PriceLookbackWindow}): 24 hours for crypto
+ * and on an ordinary trading day, stretched over weekends and US market holidays for exchange-listed
+ * instruments. A flat 24 hours treated every closed weekend as missing data, so LIVE simulations
+ * holding equities skipped every snapshot from Saturday evening to Monday pre-market.</p>
  */
 final class LatestMarketPrices {
 
     private static final Logger LOG = Logger.getLogger(LatestMarketPrices.class);
 
-    /** How far back to look for a price before treating the symbol as unpriced. */
-    private static final int LOOKBACK_HOURS = 24;
+    /** How far back a price may lie per symbol before the symbol is treated as unpriced. */
+    private static final PriceLookbackWindow LOOKBACK = new PriceLookbackWindow();
 
     private LatestMarketPrices() {
     }
@@ -85,7 +90,13 @@ final class LatestMarketPrices {
             symbolByTicker.putIfAbsent(symbol.ticker(), symbol);
         }
 
-        Instant from = asOf.minus(LOOKBACK_HOURS, ChronoUnit.HOURS);
+        // One query wide enough for the most generous window; each event is then held to its own
+        // symbol's window below, so a crypto price never borrows an equity's weekend allowance.
+        Map<Symbol, Instant> earliestBySymbol = new HashMap<>();
+        for (Symbol symbol : symbolByTicker.values()) {
+            earliestBySymbol.put(symbol, LOOKBACK.earliestAcceptable(symbol.type(), asOf));
+        }
+        Instant from = earliestBySymbol.values().stream().min(Instant::compareTo).orElse(asOf);
 
         List<MarketEvent> priceEvents = marketEventRepository.findByTickersAndTimeRange(
                 cryptoTickers, stockTickers, from, asOf, EventType.PRICE, null);
@@ -108,7 +119,7 @@ final class LatestMarketPrices {
             }
 
             Symbol symbol = symbolByTicker.get(event.symbol());
-            if (symbol == null) {
+            if (symbol == null || event.timestamp().isBefore(earliestBySymbol.get(symbol))) {
                 continue;
             }
 
@@ -128,7 +139,8 @@ final class LatestMarketPrices {
 
         for (Symbol symbol : symbols) {
             if (!prices.containsKey(symbol)) {
-                LOG.debugf("No price for %s within %dh of %s", symbol.ticker(), LOOKBACK_HOURS, asOf);
+                LOG.debugf("No price for %s since %s (as-of %s)",
+                        symbol.ticker(), LOOKBACK.earliestAcceptable(symbol.type(), asOf), asOf);
             }
         }
 
