@@ -108,7 +108,10 @@ public class JpaMarketResearchAdapter implements MarketResearchRepository {
     @Override
     public List<MarketResearch> findDueForExecution(Instant now) {
         TypedQuery<MarketResearchJpaEntity> query = entityManager.createQuery(
-            "SELECT m FROM MarketResearchJpaEntity m WHERE m.status = :status AND m.nextScheduledRun <= :now",
+            // pausedForExternalReason: a system pause (budget depleted) leaves status ACTIVE, so
+            // without this the scheduler re-ran budget-paused research every hour.
+            "SELECT m FROM MarketResearchJpaEntity m WHERE m.status = :status AND m.nextScheduledRun <= :now"
+                + " AND m.pausedForExternalReason = false",
             MarketResearchJpaEntity.class
         );
         query.setParameter("status", ResearchStatus.ACTIVE.name());

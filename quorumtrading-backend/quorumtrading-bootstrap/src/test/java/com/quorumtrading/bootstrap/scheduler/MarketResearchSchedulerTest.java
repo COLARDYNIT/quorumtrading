@@ -1,5 +1,15 @@
 package com.quorumtrading.bootstrap.scheduler;
 
+import com.quorumtrading.application.exception.BudgetDepletedException;
+import com.quorumtrading.application.exception.DailySpendLimitExceededException;
+import com.quorumtrading.model.entity.MarketResearch;
+import com.quorumtrading.model.enums.InvestmentType;
+import com.quorumtrading.model.valueobject.ResearchInterval;
+import com.quorumtrading.model.valueobject.Symbol;
+import com.quorumtrading.model.valueobject.UserId;
+import java.math.BigDecimal;
+import java.util.Set;
+import static org.assertj.core.api.Assertions.assertThat;
 import com.quorumtrading.application.port.out.MarketResearchRepository;
 import com.quorumtrading.application.usecase.EvaluateFeatureUseCase;
 import com.quorumtrading.application.usecase.ExecuteMarketResearchUseCase;
@@ -88,5 +98,47 @@ class MarketResearchSchedulerTest {
         scheduler(false).checkAndExecuteDueResearch();
 
         verify(repository, never()).findDueForExecution(any());
+    }
+    @Test
+    @DisplayName("a depleted budget is a budget skip, not a failure, and the batch carries on")
+    void depletedBudgetIsASkipNotAFailure() {
+        MarketResearch depleted = research();
+        MarketResearch healthy = research();
+        when(evaluateFeature.isEnabled(any(), any())).thenReturn(true);
+        when(repository.findDueForExecution(any())).thenReturn(List.of(depleted, healthy));
+        when(executeUseCase.execute(depleted.getId(), depleted.getOwnerId()))
+            .thenThrow(new BudgetDepletedException(depleted.getOwnerId()));
+
+        MarketResearchScheduler scheduler = scheduler(true);
+
+        assertThat(scheduler.runOne(depleted)).isEqualTo(MarketResearchScheduler.RunOutcome.SKIPPED_BUDGET);
+        assertThat(scheduler.runOne(healthy)).isEqualTo(MarketResearchScheduler.RunOutcome.EXECUTED);
+        scheduler.checkAndExecuteDueResearch();
+        verify(executeUseCase, org.mockito.Mockito.times(2)).execute(healthy.getId(), healthy.getOwnerId());
+    }
+
+    @Test
+    @DisplayName("a spent daily cap is a budget skip too")
+    void dailyCapIsASkip() {
+        MarketResearch capped = research();
+        when(executeUseCase.execute(capped.getId(), capped.getOwnerId()))
+            .thenThrow(new DailySpendLimitExceededException(capped.getOwnerId(), BigDecimal.ONE, BigDecimal.TEN));
+
+        assertThat(scheduler(true).runOne(capped)).isEqualTo(MarketResearchScheduler.RunOutcome.SKIPPED_BUDGET);
+    }
+
+    @Test
+    @DisplayName("any other exception is still a failure")
+    void otherExceptionsAreFailures() {
+        MarketResearch broken = research();
+        when(executeUseCase.execute(broken.getId(), broken.getOwnerId()))
+            .thenThrow(new IllegalStateException("boom"));
+
+        assertThat(scheduler(true).runOne(broken)).isEqualTo(MarketResearchScheduler.RunOutcome.FAILED);
+    }
+
+    private static MarketResearch research() {
+        return new MarketResearch("Research", "# x", Set.of(new Symbol("BTC", InvestmentType.CRYPTO)),
+            new ResearchInterval(1, ResearchInterval.Unit.DAYS), false, null, UserId.generate());
     }
 }

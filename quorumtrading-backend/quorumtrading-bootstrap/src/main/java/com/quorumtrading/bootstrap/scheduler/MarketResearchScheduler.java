@@ -1,5 +1,7 @@
 package com.quorumtrading.bootstrap.scheduler;
 
+import com.quorumtrading.application.exception.BudgetDepletedException;
+import com.quorumtrading.application.exception.DailySpendLimitExceededException;
 import com.quorumtrading.application.port.out.MarketResearchRepository;
 import com.quorumtrading.application.usecase.EvaluateFeatureUseCase;
 import com.quorumtrading.application.usecase.ExecuteMarketResearchUseCase;
@@ -75,23 +77,46 @@ public class MarketResearchScheduler {
         LOG.infof("Found %d market research configurations due for execution", dueResearch.size());
 
         int successCount = 0;
+        int skippedCount = 0;
         int failureCount = 0;
 
         for (MarketResearch research : dueResearch) {
-            try {
-                LOG.infof("Executing market research: %s (%s)", research.getId(), research.getName());
-                // Run as the research's owner, not as "no user". Passing null used to skip the
-                // ownership check entirely; it now denies.
-                executeUseCase.execute(research.getId(), research.getOwnerId());
-                successCount++;
-                LOG.infof("Successfully executed market research: %s", research.getId());
-            } catch (Exception e) {
-                failureCount++;
-                LOG.errorf(e, "Failed to execute market research: %s (%s)", research.getId(), research.getName());
-                // Continue with next research (don't fail entire batch)
+            // Continue with next research on any outcome (don't fail entire batch)
+            switch (runOne(research)) {
+                case EXECUTED -> successCount++;
+                case SKIPPED_BUDGET -> skippedCount++;
+                case FAILED -> failureCount++;
             }
         }
 
-        LOG.infof("Market research scheduler completed - Success: %d, Failed: %d", successCount, failureCount);
+        LOG.infof("Market research scheduler completed - Success: %d, Skipped (budget): %d, Failed: %d",
+            successCount, skippedCount, failureCount);
+    }
+
+    /** What one due research came to on this tick. */
+    enum RunOutcome { EXECUTED, SKIPPED_BUDGET, FAILED }
+
+    /**
+     * Run one due research as its owner.
+     *
+     * <p>A budget refusal is the user's account state, not a fault: the use case has already paused
+     * (lifetime budget) or deferred (daily cap) the research so it is not picked up again, so it is
+     * logged once at WARN without a stack trace instead of as an ERROR.</p>
+     */
+    RunOutcome runOne(MarketResearch research) {
+        try {
+            LOG.infof("Executing market research: %s (%s)", research.getId(), research.getName());
+            // Run as the research's owner, not as "no user". Passing null used to skip the
+            // ownership check entirely; it now denies.
+            executeUseCase.execute(research.getId(), research.getOwnerId());
+            LOG.infof("Successfully executed market research: %s", research.getId());
+            return RunOutcome.EXECUTED;
+        } catch (BudgetDepletedException | DailySpendLimitExceededException e) {
+            LOG.warnf("Skipped market research %s (%s): %s", research.getId(), research.getName(), e.getMessage());
+            return RunOutcome.SKIPPED_BUDGET;
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to execute market research: %s (%s)", research.getId(), research.getName());
+            return RunOutcome.FAILED;
+        }
     }
 }

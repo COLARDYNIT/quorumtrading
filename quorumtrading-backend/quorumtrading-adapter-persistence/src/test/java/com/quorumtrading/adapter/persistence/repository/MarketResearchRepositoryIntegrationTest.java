@@ -199,6 +199,27 @@ class MarketResearchRepositoryIntegrationTest {
 
     @Test
     @Transactional
+    @DisplayName("shouldNotFindDueForExecution_WhenPausedForExternalReason")
+    void shouldNotFindDueForExecution_WhenPausedForExternalReason() {
+        // A research the system paused for budget stays ACTIVE (it is not the user's pause), so the
+        // status filter alone let the scheduler pick it up again every hour.
+        MarketResearch budgetPaused = createTestResearch(
+            "Budget Paused Research",
+            Set.of(new Symbol("ETH", CRYPTO))
+        );
+        budgetPaused.pauseForExternalReason("BUDGET_DEPLETED");
+        repository.save(budgetPaused);
+
+        Instant futureTime = budgetPaused.getNextScheduledRun().plus(1, ChronoUnit.HOURS);
+
+        List<MarketResearch> dueResults = repository.findDueForExecution(futureTime);
+
+        assertThat(dueResults).extracting(MarketResearch::getId)
+            .doesNotContain(budgetPaused.getId());
+    }
+
+    @Test
+    @Transactional
     @DisplayName("shouldDeleteMarketResearch_WhenResearchExists")
     void shouldDeleteMarketResearch_WhenResearchExists() {
         // Arrange
