@@ -83,9 +83,9 @@ public class MarketResearchScheduler {
         for (MarketResearch research : dueResearch) {
             // Continue with next research on any outcome (don't fail entire batch)
             switch (runOne(research)) {
-                case EXECUTED -> successCount++;
-                case SKIPPED_BUDGET -> skippedCount++;
-                case FAILED -> failureCount++;
+                case EXECUTED -> { successCount++; }
+                case SKIPPED_BUDGET -> { skippedCount++; }
+                case FAILED -> { failureCount++; }
             }
         }
 
