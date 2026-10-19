@@ -137,6 +137,21 @@ class MarketResearchSchedulerTest {
         assertThat(scheduler(true).runOne(broken)).isEqualTo(MarketResearchScheduler.RunOutcome.FAILED);
     }
 
+    @Test
+    @DisplayName("a failed research does not stop the rest of the batch")
+    void failureDoesNotStopTheBatch() {
+        MarketResearch broken = research();
+        MarketResearch healthy = research();
+        when(evaluateFeature.isEnabled(any(), any())).thenReturn(true);
+        when(repository.findDueForExecution(any())).thenReturn(List.of(broken, healthy));
+        when(executeUseCase.execute(broken.getId(), broken.getOwnerId()))
+            .thenThrow(new IllegalStateException("boom"));
+
+        scheduler(true).checkAndExecuteDueResearch();
+
+        verify(executeUseCase).execute(healthy.getId(), healthy.getOwnerId());
+    }
+
     private static MarketResearch research() {
         return new MarketResearch("Research", "# x", Set.of(new Symbol("BTC", InvestmentType.CRYPTO)),
             new ResearchInterval(1, ResearchInterval.Unit.DAYS), false, null, UserId.generate());
