@@ -81,7 +81,7 @@ jobs:
       # externally-managed (PEP 668) and a bare `pip install` fails on it.
       - name: Set up Python (for diff-cover)
         if: github.event_name == 'pull_request'
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.13'
 
@@ -144,7 +144,7 @@ jobs:
       # total, which is what makes the total climb.
       - name: Set up Python (for diff-cover)
         if: github.event_name == 'pull_request'
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.13'
 
