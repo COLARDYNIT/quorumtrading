@@ -45,7 +45,7 @@ public class MarketDataStatusTools extends McpToolBase {
             payload.put("cryptoUsable", status.cryptoUsable());
             payload.put("stockUsable", status.stockUsable());
             payload.put("providers", status.providers().stream().map(MarketDataStatusTools::providerPayload).toList());
-            payload.put("hint", statusHint(status));
+            payload.put("hint", status.hint());
             return toJson(payload);
         });
     }
@@ -58,7 +58,8 @@ public class MarketDataStatusTools extends McpToolBase {
         entry.put("usable", provider.usable());
         entry.put("assetClasses", provider.assetClasses());
         entry.put("features", provider.features());
-        entry.put("detail", providerDetail(provider));
+        // Copy lives on the record itself so the REST endpoint says the same thing.
+        entry.put("detail", provider.detail());
         if (provider.probe() != null) {
             entry.put("probe", Map.of(
                 "symbol", provider.probe().symbol(),
@@ -66,32 +67,5 @@ public class MarketDataStatusTools extends McpToolBase {
                 "detail", provider.probe().detail()));
         }
         return entry;
-    }
-
-    private static String providerDetail(MarketDataStatus.ProviderStatus provider) {
-        if (!provider.enabled()) {
-            return "Switched off for this deployment — it is never called and never counted among "
-                + "the providers a failed backfill says it tried.";
-        }
-        if (!provider.credentialed()) {
-            return "Switched on but holding no credentials, so it is skipped rather than called. "
-                + "Set its API key and restart the backend.";
-        }
-        return "Enabled and credentialed.";
-    }
-
-    private static String statusHint(MarketDataStatus status) {
-        if (status.cryptoUsable() && status.stockUsable()) {
-            return "Both crypto and stock candles have a usable provider.";
-        }
-        if (status.cryptoUsable()) {
-            return "Crypto candles are served (keyless). No usable stock provider — stock backfills "
-                + "will return nothing until one is enabled and given a key.";
-        }
-        if (status.stockUsable()) {
-            return "Stock candles are served. No usable crypto provider on this deployment.";
-        }
-        return "No price provider is usable, so every backfill will return nothing. This is a "
-            + "configuration problem, not a coverage problem — do not go looking for a different ticker.";
     }
 }

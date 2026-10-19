@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import styled from 'styled-components';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { Panel } from '@/app/components/shared/v2';
-import { useDataCoverage, useDataHorizon, useStrategy } from '@/app/lib/api/hooks';
+import { useDataCoverage, useDataHorizon, useMarketDataStatus, useStrategy } from '@/app/lib/api/hooks';
 import { useBackfillProgress } from '@/app/lib/websocket/useBackfillProgress';
 import { EventType, GapStatus } from '@/app/lib/types/dataAvailability';
 import type { HistoricalEventResponse } from '@/app/lib/types/api';
@@ -15,8 +15,9 @@ import { PriceGrid } from './PriceGrid';
 import { BackfillColumn } from './BackfillColumn';
 import { EventRows, eventRangeLabel } from './EventRows';
 import { VerifyBanner } from './VerifyBanner';
+import { ProviderStatusBanner } from './ProviderStatusBanner';
 import { FilterRail } from './FilterRail';
-import { buildDays, indexDaily, buildVerdict } from './coverageDerive';
+import { buildDays, indexDaily, buildVerdict, type AssetClassUsability } from './coverageDerive';
 
 /**
  * Extract symbols from a strategy's markdown content (incl. YAML frontmatter).
@@ -217,6 +218,17 @@ export function DataAvailabilityDashboardV2() {
     return map;
   }, [horizonData]);
 
+  // Deployment provider status (same use case as MCP get_market_data_status):
+  // drives the keyless-install banner and the `nokey` rendering everywhere.
+  const { data: marketDataStatus } = useMarketDataStatus();
+  const usable = useMemo<AssetClassUsability | undefined>(
+    () =>
+      marketDataStatus
+        ? { stock: marketDataStatus.stockUsable, crypto: marketDataStatus.cryptoUsable }
+        : undefined,
+    [marketDataStatus]
+  );
+
   // Live FAILED gaps from the most-recent job → drive `failed` cells.
   const { allJobs } = useBackfillProgress();
   const failedGaps = useMemo(() => {
@@ -245,8 +257,9 @@ export function DataAvailabilityDashboardV2() {
       gaps: coverage.gaps,
       failedGaps,
       horizon,
+      usable,
     });
-  }, [coverage, selectedSymbols, dataTypes, days, dailyIndex, failedGaps, horizon]);
+  }, [coverage, selectedSymbols, dataTypes, days, dailyIndex, failedGaps, horizon, usable]);
 
   const rangeShort = format(selectedMonth, 'MMM');
   const rangeSub = `${format(selectedMonth, 'yyyy')} · ${days.length} days`;
@@ -272,6 +285,8 @@ export function DataAvailabilityDashboardV2() {
         </div>
         {strategy && <span className="strategy">strategy · {strategy.name}</span>}
       </Head>
+
+      <ProviderStatusBanner status={marketDataStatus} />
 
       <VerdictBand
         verdict={verdict}
@@ -314,6 +329,7 @@ export function DataAvailabilityDashboardV2() {
               gaps={coverage?.gaps ?? []}
               failedGaps={failedGaps}
               horizon={horizon}
+              usable={usable}
               justFilledSymbols={verify?.symbols}
               loading={isLoading}
             />
@@ -328,12 +344,13 @@ export function DataAvailabilityDashboardV2() {
             from={from}
             to={to}
             horizon={horizon}
+            usable={usable}
           />
         </BackfillPane>
       </Grid>
 
       <Panel title="Historic event backfill" count="price · suggested assets">
-        <EventRows onBackfilled={handleBackfilled} />
+        <EventRows onBackfilled={handleBackfilled} usable={usable} />
       </Panel>
     </Page>
   );

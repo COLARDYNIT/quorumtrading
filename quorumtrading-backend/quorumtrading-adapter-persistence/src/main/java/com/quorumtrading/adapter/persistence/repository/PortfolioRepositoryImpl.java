@@ -227,8 +227,8 @@ public class PortfolioRepositoryImpl implements PortfolioRepository, PanacheRepo
             colIdx++;
         }
 
-        BigDecimal totalValueUsd = (BigDecimal) row[colIdx++];
-        BigDecimal cashAvailable = (BigDecimal) row[colIdx];
+        BigDecimal totalValueUsd = (BigDecimal) row[colIdx];
+        BigDecimal cashAvailable = (BigDecimal) row[colIdx + 1];
 
         // Validate totalValue
         if (totalValueUsd == null || totalValueUsd.compareTo(BigDecimal.ZERO) <= 0) {

@@ -33,6 +33,7 @@ import java.util.UUID;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.when;
 
 @QuarkusTest
@@ -55,6 +56,9 @@ class DataAvailabilityResourceTest {
 
     @InjectMock
     com.quorumtrading.application.service.ClassifyGapsService classifyGapsService;
+
+    @InjectMock
+    com.quorumtrading.application.usecase.marketdata.GetMarketDataStatusUseCase marketDataStatusUseCase;
 
     private static final UserId TEST_USER_ID = UserId.generate();
     private static final Symbol BTC = new Symbol("BTC", InvestmentType.CRYPTO);
@@ -355,5 +359,65 @@ class DataAvailabilityResourceTest {
             .get("/api/v1/data-availability/backfill/{jobId}")
         .then()
             .statusCode(400);
+    }
+
+    // --- Market-data status endpoint tests ---
+
+    private static com.quorumtrading.application.usecase.marketdata.MarketDataStatus keylessInstallStatus() {
+        return new com.quorumtrading.application.usecase.marketdata.MarketDataStatus(
+            true,   // crypto served keyless
+            false,  // no usable stock provider
+            java.util.List.of(
+                new com.quorumtrading.application.usecase.marketdata.MarketDataStatus.ProviderStatus(
+                    "alpaca", true, false, java.util.List.of("CRYPTO", "STOCK"),
+                    java.util.List.of("BACKFILL", "CANDLES"), null),
+                new com.quorumtrading.application.usecase.marketdata.MarketDataStatus.ProviderStatus(
+                    "kraken", true, true, java.util.List.of("CRYPTO"),
+                    java.util.List.of("BACKFILL", "CANDLES"), null)
+            ));
+    }
+
+    @Test
+    @DisplayName("GET /market-data-status - reports keyless install honestly: crypto usable, stocks need a key")
+    void shouldReportKeylessInstallProviderState() {
+        when(marketDataStatusUseCase.get(false)).thenReturn(keylessInstallStatus());
+
+        given()
+        .when()
+            .get("/api/v1/data-availability/market-data-status")
+        .then()
+            .statusCode(200)
+            .contentType(ContentType.JSON)
+            .body("cryptoUsable", is(true))
+            .body("stockUsable", is(false))
+            .body("hint", containsString("No usable stock provider"))
+            .body("providers", hasSize(2))
+            .body("providers[0].name", equalTo("alpaca"))
+            .body("providers[0].usable", is(false))
+            .body("providers[0].credentialed", is(false))
+            .body("providers[0].detail", containsString("Set its API key"))
+            .body("providers[1].name", equalTo("kraken"))
+            .body("providers[1].usable", is(true));
+    }
+
+    @Test
+    @DisplayName("GET /market-data-status - does not probe by default, probes when asked")
+    void shouldOnlyProbeWhenExplicitlyRequested() {
+        when(marketDataStatusUseCase.get(anyBoolean())).thenReturn(keylessInstallStatus());
+
+        given()
+        .when()
+            .get("/api/v1/data-availability/market-data-status")
+        .then()
+            .statusCode(200);
+        org.mockito.Mockito.verify(marketDataStatusUseCase).get(false);
+
+        given()
+            .queryParam("probe", "true")
+        .when()
+            .get("/api/v1/data-availability/market-data-status")
+        .then()
+            .statusCode(200);
+        org.mockito.Mockito.verify(marketDataStatusUseCase).get(true);
     }
 }

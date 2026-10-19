@@ -205,7 +205,7 @@ export function VerdictBand({ verdict, rangeShort, rangeSub, loading }: VerdictB
         <span className="val muted">
           {loading || !verdict ? <HedgedValue /> : setAside}
         </span>
-        <span className="sub">closed · future · pre-horizon</span>
+        <span className="sub">closed · future · pre-horizon · no key</span>
       </Kpi>
       <Kpi>
         <span className="lbl">Range</span>

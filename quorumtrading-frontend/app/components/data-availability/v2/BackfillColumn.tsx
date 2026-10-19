@@ -10,7 +10,12 @@ import { EventType, GapStatus } from '@/app/lib/types/dataAvailability';
 import type { DataGap, GapProgressDTO } from '@/app/lib/types/dataAvailability';
 import { Panel } from '@/app/components/shared/v2';
 import { dotBase, labelCompact, pillBase, tagBase } from '@/app/styles/labels';
-import { summariseJob, type JobSummary } from './coverageDerive';
+import {
+  summariseJob,
+  symbolNeedsKey,
+  type AssetClassUsability,
+  type JobSummary,
+} from './coverageDerive';
 
 interface BackfillColumnProps {
   /** Real actionable gaps (DataGap[]) for the current selection. */
@@ -21,6 +26,8 @@ interface BackfillColumnProps {
   to: string;
   /** `/horizon` map (symbol → earliest ISO date). Drives the pre-coverage set-aside. */
   horizon?: Record<string, string>;
+  /** Asset-class usability from `/market-data-status` — keyless classes get "needs key" labels. */
+  usable?: AssetClassUsability;
 }
 
 const PENDING_C = '#9d8cff';
@@ -348,6 +355,22 @@ function isActionable(g: DataGap): boolean {
   return g.from.slice(0, 10) <= todayIso();
 }
 
+/**
+ * Provider label for an actionable gap row: the provider that would actually be
+ * used, or "none — needs API key" when the symbol's asset class has no usable
+ * provider, or a hedged dash when the signal is simply absent.
+ */
+function gapProviderLabel(
+  g: DataGap,
+  usable: AssetClassUsability | undefined
+): React.ReactNode {
+  if (g.provider) return g.provider;
+  if (g.symbol !== 'MARKET' && symbolNeedsKey(g.symbol, usable)) {
+    return 'none — needs API key';
+  }
+  return <HedgedValue title="No provider on this gap" label="provider" />;
+}
+
 /** Human label for a non-actionable (set-aside) classification. */
 function setAsideLabel(classification: string | undefined): string {
   switch (classification) {
@@ -355,6 +378,8 @@ function setAsideLabel(classification: string | undefined): string {
       return 'not yet occurred';
     case 'NO_SOURCE':
       return 'no source';
+    case 'NO_CREDENTIALED_PROVIDER':
+      return 'none — needs API key';
     case 'BEFORE_HORIZON':
       return 'before provider coverage';
     default:
@@ -494,16 +519,20 @@ function JobProgressView({ job }: { job: JobSummary }) {
   );
 }
 
-export function BackfillColumn({ gaps, symbols, dataTypes, from, to, horizon }: BackfillColumnProps) {
+export function BackfillColumn({ gaps, symbols, dataTypes, from, to, horizon, usable }: BackfillColumnProps) {
   const { mutate: requestBackfill, isPending } = useRequestBackfill();
   const { allJobs } = useBackfillProgress();
 
   // Symbols whose PRICE is "before coverage" for THIS view: the entire selected
   // month (from..to) sits before the provider's earliest available date. Only
   // symbols with a real horizon date qualify — unknown horizons are never listed.
+  // A symbol whose asset class has no usable provider is EXCLUDED: its cached
+  // horizon may be a floor poisoned by a keyless backfill, and "before provider
+  // coverage" would misdiagnose a missing API key as missing history.
   const preCoverage = useMemo(() => {
     return symbols
       .map(sym => {
+        if (symbolNeedsKey(sym, usable)) return null;
         const earliest = horizon?.[sym];
         if (!earliest) return null;
         const earliestIso = earliest.slice(0, 10);
@@ -514,7 +543,7 @@ export function BackfillColumn({ gaps, symbols, dataTypes, from, to, horizon }: 
         return null;
       })
       .filter((x): x is { sym: string; label: string } => x !== null);
-  }, [symbols, horizon, to]);
+  }, [symbols, horizon, to, usable]);
 
   // Find the most-recent job (real). Active jobs render progress; otherwise the
   // most-recently-updated completed job renders the truthful result panel.
@@ -621,14 +650,7 @@ export function BackfillColumn({ gaps, symbols, dataTypes, from, to, horizon }: 
                   <span>
                     {g.from.slice(0, 10)} → {g.to.slice(0, 10)}
                   </span>
-                  <span>
-                    ·{' '}
-                    {g.provider ? (
-                      g.provider
-                    ) : (
-                      <HedgedValue title="No provider on this gap" label="provider" />
-                    )}
-                  </span>
+                  <span>· {gapProviderLabel(g, usable)}</span>
                 </div>
               </div>
               {/* Real estimated records per gap from the backend classification. */}

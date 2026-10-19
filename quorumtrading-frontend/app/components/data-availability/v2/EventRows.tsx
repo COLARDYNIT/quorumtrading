@@ -5,11 +5,22 @@ import styled from 'styled-components';
 import { useHistoricalEvents, useRequestBackfill } from '@/app/lib/api/hooks';
 import { EventType } from '@/app/lib/types/dataAvailability';
 import type { HistoricalEventResponse } from '@/app/lib/types/api';
-import { eventCatClass, eventCatLabel } from './coverageDerive';
+import {
+  eventCatClass,
+  eventCatLabel,
+  keylessAssets,
+  type AssetClassUsability,
+} from './coverageDerive';
 
 interface EventRowsProps {
   /** Called after a backfill is requested: lift symbols + start month to the page. */
   onBackfilled: (event: HistoricalEventResponse) => void;
+  /**
+   * Asset-class usability from `/market-data-status`. Events whose symbols have
+   * no usable provider keep their button but state the consequence up front —
+   * a keyless install should never discover it by clicking.
+   */
+  usable?: AssetClassUsability;
 }
 
 const Rows = styled.div`
@@ -89,13 +100,20 @@ const Tickers = styled.span`
   flex-wrap: wrap;
 `;
 
-const Tk = styled.span`
+const Tk = styled.span<{ $nokey?: boolean }>`
   font-family: ${p => p.theme.typography.fontFamily.mono};
   font-size: 10px;
   padding: 1px 6px;
   border-radius: ${p => p.theme.borderRadius.sm};
-  border: 1px solid ${p => p.theme.colors.border};
-  color: ${p => p.theme.colors.fgMuted};
+  border: 1px solid ${p => (p.$nokey ? 'rgba(255,176,0,0.5)' : p.theme.colors.border)};
+  color: ${p => (p.$nokey ? '#ffb000' : p.theme.colors.fgMuted)};
+`;
+
+const NoKeyNote = styled.span`
+  flex-basis: 100%;
+  font-family: ${p => p.theme.typography.fontFamily.mono};
+  font-size: 10px;
+  color: #ffb000;
 `;
 
 const Act = styled.span`
@@ -146,7 +164,23 @@ function rangeLabel(ev: HistoricalEventResponse): string {
   return a === b ? a : `${a} – ${b}`;
 }
 
-export function EventRows({ onBackfilled }: EventRowsProps) {
+/**
+ * The consequence line for an event on a keyless install, or null when every
+ * suggested symbol has a usable provider. Exported for tests.
+ */
+export function eventConsequence(
+  assets: string[],
+  usable: AssetClassUsability | undefined
+): string | null {
+  const keyless = keylessAssets(assets, usable);
+  if (keyless.length === 0) return null;
+  if (keyless.length === assets.length) {
+    return 'needs a market-data key — no symbol of this event can be fetched until one is set';
+  }
+  return `needs a market-data key — ${keyless.join(', ')} will be skipped without one`;
+}
+
+export function EventRows({ onBackfilled, usable }: EventRowsProps) {
   const { data: events, isLoading } = useHistoricalEvents();
   const { mutate: requestBackfill, isPending } = useRequestBackfill();
   const [sel, setSel] = useState<number | null>(null);
@@ -179,6 +213,8 @@ export function EventRows({ onBackfilled }: EventRowsProps) {
     <Rows>
       {events.map(ev => {
         const cat = eventCatClass(ev.category);
+        const keyless = new Set(keylessAssets(ev.suggestedAssets, usable));
+        const consequence = eventConsequence(ev.suggestedAssets, usable);
         return (
           <Row key={ev.id} $sel={sel === ev.id} onClick={() => setSel(ev.id)}>
             <Cat $cat={cat}>{eventCatLabel(ev.category)}</Cat>
@@ -186,8 +222,11 @@ export function EventRows({ onBackfilled }: EventRowsProps) {
             <Range>{rangeLabel(ev)}</Range>
             <Tickers>
               {ev.suggestedAssets.map(t => (
-                <Tk key={t}>{t}</Tk>
+                <Tk key={t} $nokey={keyless.has(t)} title={keyless.has(t) ? 'no usable provider — needs a market-data API key' : undefined}>
+                  {t}
+                </Tk>
               ))}
+              {consequence && <NoKeyNote>{consequence}</NoKeyNote>}
             </Tickers>
             <Act>
               <RunBtn

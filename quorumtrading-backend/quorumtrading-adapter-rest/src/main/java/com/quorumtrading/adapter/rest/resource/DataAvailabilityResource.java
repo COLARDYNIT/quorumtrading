@@ -3,6 +3,7 @@ package com.quorumtrading.adapter.rest.resource;
 import com.quorumtrading.adapter.rest.dto.response.BackfillResponse;
 import com.quorumtrading.adapter.rest.dto.response.DataAvailabilityResponse;
 import com.quorumtrading.adapter.rest.dto.response.DataHorizonResponse;
+import com.quorumtrading.adapter.rest.dto.response.MarketDataStatusResponse;
 import com.quorumtrading.adapter.rest.exception.ProblemDetails;
 import com.quorumtrading.application.service.DataHorizonService;
 import com.quorumtrading.application.usecase.AnalyzeDataAvailabilityUseCase;
@@ -86,6 +87,52 @@ public class DataAvailabilityResource {
 
     @Inject
     com.quorumtrading.application.port.out.MarketDataHorizonRepository horizonRepository;
+
+    @Inject
+    com.quorumtrading.application.usecase.marketdata.GetMarketDataStatusUseCase marketDataStatusUseCase;
+
+    @GET
+    @Path("/market-data-status")
+    @Operation(
+        summary = "Deployment market-data provider status",
+        description = "Which candle-serving providers this deployment has, whether each is enabled and " +
+            "credentialed, and whether stocks / crypto have any usable provider at all. The REST rendering " +
+            "of the same use case behind the MCP tool get_market_data_status. The Data Availability page " +
+            "uses it to tell 'no API key configured' apart from 'no data exists for this range'."
+    )
+    @APIResponse(
+        responseCode = "200",
+        description = "Provider status retrieved",
+        content = @Content(
+            mediaType = MediaType.APPLICATION_JSON,
+            schema = @Schema(implementation = MarketDataStatusResponse.class)
+        )
+    )
+    public Response getMarketDataStatus(
+        @QueryParam("probe")
+        @Parameter(description = "Make a live call to each usable provider (default false — configuration " +
+            "state only, cheap enough for page loads)", example = "false")
+        Boolean probe
+    ) {
+        var status = marketDataStatusUseCase.get(Boolean.TRUE.equals(probe));
+
+        List<MarketDataStatusResponse.Provider> providers = status.providers().stream()
+            .map(p -> new MarketDataStatusResponse.Provider(
+                p.name(),
+                p.enabled(),
+                p.credentialed(),
+                p.usable(),
+                p.assetClasses(),
+                p.detail()))
+            .toList();
+
+        return Response.ok(new MarketDataStatusResponse(
+            status.cryptoUsable(),
+            status.stockUsable(),
+            providers,
+            status.hint()
+        )).build();
+    }
 
     @GET
     @Path("/coverage")
