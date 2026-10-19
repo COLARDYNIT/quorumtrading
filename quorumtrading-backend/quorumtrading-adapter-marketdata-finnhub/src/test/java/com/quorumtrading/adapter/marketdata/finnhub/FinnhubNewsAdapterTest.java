@@ -256,4 +256,20 @@ class FinnhubNewsAdapterTest {
         assertTrue(events.isEmpty());
         verifyNoInteractions(restClient);
     }
+
+    @Test
+    void missingKeyIsReportedOnceNotOnEveryCollectionTick() {
+        // Prod logged this WARN every 5 minutes (8,644 lines in 30 days) for a fact that cannot
+        // change without a redeploy. The first call reports it; later calls stay quiet.
+        FinnhubNewsAdapter keyless = new FinnhubNewsAdapter(restClient, "", true);
+        assertFalse(keyless.missingKeyReported(), "nothing reported before the adapter is used");
+
+        keyless.fetchMarketNews(Instant.now().minus(1, ChronoUnit.DAYS), Instant.now());
+        assertTrue(keyless.missingKeyReported(), "the first call reports the missing key");
+
+        List<MarketEvent> later = keyless.fetchDataInRange(
+                java.util.Set.of(), java.util.Set.of("AAPL"), Instant.now().minus(1, ChronoUnit.DAYS), Instant.now());
+        assertTrue(later.isEmpty(), "still skips collection without a key");
+        verifyNoInteractions(restClient);
+    }
 }

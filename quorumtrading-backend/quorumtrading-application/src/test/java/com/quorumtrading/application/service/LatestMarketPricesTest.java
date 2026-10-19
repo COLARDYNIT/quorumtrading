@@ -104,6 +104,74 @@ class LatestMarketPricesTest {
         assertThat(prices.get(CRYPTO_BTC).amount()).isEqualByComparingTo("63828.87");
     }
 
+    // --- A closed market is not missing data (prod: QQQ, every weekend, 2026-09/10) ---
+
+    private static final Symbol STOCK_QQQ = new Symbol("QQQ", InvestmentType.STOCK);
+    private static final Instant FRIDAY_LAST_TRADE = Instant.parse("2026-10-16T20:37:00Z");
+
+    /** A repository that honours the time window it is asked for, as the real one does. */
+    private void storedPrices(MarketEvent... events) {
+        when(repository.findByTickersAndTimeRange(any(), any(), any(), any(), any(), any()))
+                .thenAnswer(invocation -> {
+                    Instant from = invocation.getArgument(2);
+                    Instant to = invocation.getArgument(3);
+                    return java.util.Arrays.stream(events)
+                            .filter(e -> !e.timestamp().isBefore(from) && !e.timestamp().isAfter(to))
+                            .toList();
+                });
+    }
+
+    private static MarketEvent price(String ticker, Instant at, String price) {
+        return new MarketEvent(at, EventType.PRICE, "test", ticker, Map.of("price", price));
+    }
+
+    @Test
+    @DisplayName("Monday pre-market still values an equity at Friday's last price (the prod case)")
+    void mondayPreMarketUsesFridaysPrice() {
+        storedPrices(price("QQQ", FRIDAY_LAST_TRADE, "710.2"));
+
+        Map<Symbol, Money> prices = LatestMarketPrices.resolve(
+                repository, Set.of(STOCK_QQQ), Instant.parse("2026-10-19T11:27:54Z"));
+
+        assertThat(prices.get(STOCK_QQQ).amount()).isEqualByComparingTo("710.2");
+    }
+
+    @Test
+    @DisplayName("Saturday evening and Sunday still value an equity at Friday's last price")
+    void weekendUsesFridaysPrice() {
+        storedPrices(price("QQQ", FRIDAY_LAST_TRADE, "710.2"));
+
+        assertThat(LatestMarketPrices.resolve(repository, Set.of(STOCK_QQQ),
+                Instant.parse("2026-10-17T21:00:00Z"))).containsKey(STOCK_QQQ);
+        assertThat(LatestMarketPrices.resolve(repository, Set.of(STOCK_QQQ),
+                Instant.parse("2026-10-18T23:00:00Z"))).containsKey(STOCK_QQQ);
+    }
+
+    @Test
+    @DisplayName("mid-week, an equity price older than 24h is still missing — a stopped feed is not hidden")
+    void midWeekGapIsStillMissing() {
+        storedPrices(price("QQQ", Instant.parse("2026-10-12T20:00:00Z"), "745.64"));
+
+        assertThat(LatestMarketPrices.resolve(repository, Set.of(STOCK_QQQ),
+                Instant.parse("2026-10-14T18:00:00Z"))).doesNotContainKey(STOCK_QQQ);
+    }
+
+    @Test
+    @DisplayName("on a weekend a crypto price older than 24h is still missing, even next to an equity")
+    void cryptoKeepsItsOwnWindowInAMixedPortfolio() {
+        storedPrices(
+                price("QQQ", FRIDAY_LAST_TRADE, "710.2"),
+                price("BTC", Instant.parse("2026-10-17T05:00:00Z"), "63828.87"));
+
+        Map<Symbol, Money> prices = LatestMarketPrices.resolve(
+                repository, Set.of(STOCK_QQQ, CRYPTO_BTC), Instant.parse("2026-10-18T10:00:00Z"));
+
+        assertThat(prices).containsKey(STOCK_QQQ);
+        assertThat(prices)
+                .as("BTC trades all weekend; a 29h-old BTC price is a real gap")
+                .doesNotContainKey(CRYPTO_BTC);
+    }
+
     @Test
     @DisplayName("no symbols means no query at all")
     void noSymbolsMeansNoQuery() {
