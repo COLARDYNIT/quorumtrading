@@ -69,7 +69,9 @@ public class UserMapper {
             .collect(Collectors.toList());
 
         // Set bidirectional relationship
-        entity.oauthProviders.forEach(provider -> provider.user = entity);
+        for (var provider : entity.oauthProviders) {
+            provider.user = entity;
+        }
 
         return entity;
     }
