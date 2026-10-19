@@ -68,6 +68,12 @@ public class MockProducer {
 
     @Produces
     @ApplicationScoped
+    public com.quorumtrading.application.usecase.marketdata.GetMarketDataStatusUseCase getMarketDataStatusUseCase() {
+        return mock(com.quorumtrading.application.usecase.marketdata.GetMarketDataStatusUseCase.class);
+    }
+
+    @Produces
+    @ApplicationScoped
     public com.quorumtrading.application.service.DataHorizonService dataHorizonService() {
         return mock(com.quorumtrading.application.service.DataHorizonService.class);
     }

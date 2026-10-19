@@ -64,6 +64,7 @@ export const queryKeys = {
   backfillStatus: (jobId: string) => ['data-availability', 'backfill', jobId] as const,
   horizon: (params: { symbols: string[]; dataTypes: string[] }) =>
     ['data-availability', 'horizon', params] as const,
+  marketDataStatus: ['data-availability', 'market-data-status'] as const,
   brokerAccounts: ['broker-accounts'] as const,
   brokerAccount: (id: string) => ['broker-accounts', id] as const,
   apiTokens: ['api-tokens'] as const,
@@ -1019,6 +1020,24 @@ export function useDataHorizon(params: { symbols: string[]; dataTypes: string[] 
     enabled: params.symbols.length > 0 && params.dataTypes.includes('PRICE'),
     staleTime: 60 * 60 * 1000, // 1 hour - horizons change slowly
     gcTime: 2 * 60 * 60 * 1000, // 2 hours
+  });
+}
+
+/**
+ * Hook to fetch the deployment's market-data provider status — whether stocks /
+ * crypto have any usable (enabled + credentialed) provider, and per-provider
+ * state. Drives the keyless-install banner and the "needs API key" rendering on
+ * the Data Availability page. Configuration state changes only on restart, so
+ * this caches aggressively.
+ *
+ * GET /api/v1/data-availability/market-data-status
+ */
+export function useMarketDataStatus() {
+  return useQuery({
+    queryKey: queryKeys.marketDataStatus,
+    queryFn: () => apiClient.dataAvailability.getMarketDataStatus(),
+    staleTime: 5 * 60 * 1000, // 5 minutes — changes require a backend restart
+    gcTime: 30 * 60 * 1000,
   });
 }
 

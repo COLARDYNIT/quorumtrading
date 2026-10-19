@@ -23,6 +23,10 @@ import type {
 import { GapStatus } from '@/app/lib/types/dataAvailability';
 
 // ── cell + presence states (authoritative six, per da-app CellStateRef) ──
+// `nokey` is the keyless-install state: the symbol's asset class has NO usable
+// (enabled + credentialed) provider, so nothing here is a data gap or a data
+// floor — it needs a market-data API key. Distinct from `horizon` on purpose:
+// a missing key must never read as "permanently unavailable".
 export type PriceCellState =
   | 'present'
   | 'partial'
@@ -30,7 +34,8 @@ export type PriceCellState =
   | 'closed'
   | 'future'
   | 'failed'
-  | 'horizon';
+  | 'horizon'
+  | 'nokey';
 
 export type PresenceCellState = 'present' | 'action' | 'nosrc' | 'future';
 
@@ -45,6 +50,7 @@ export function cellWord(st: PriceCellState): string {
       future: 'not yet occurred',
       failed: 'backfill failed',
       horizon: 'before provider coverage — permanently unavailable',
+      nokey: 'needs a market-data API key — no credentialed provider for this asset class',
     } as Record<PriceCellState, string>
   )[st] ?? st;
 }
@@ -86,6 +92,37 @@ const KNOWN_CRYPTO = new Set([
 export function isCrypto(symbol: string): boolean {
   const base = symbol.replace(/[-/](USD|USDT|USDC)$/i, '').toUpperCase();
   return KNOWN_CRYPTO.has(base) || /[-/](USD|USDT|USDC)$/i.test(symbol);
+}
+
+// ── asset-class usability (from /market-data-status) ─────────────────────
+/** Per-asset-class usability signal, derived from the real status endpoint. */
+export interface AssetClassUsability {
+  stock: boolean;
+  crypto: boolean;
+}
+
+/**
+ * True when the symbol's asset class has NO usable (enabled + credentialed)
+ * provider on this deployment. Undefined usability (status not loaded) → false,
+ * so nothing is claimed without the real signal.
+ */
+export function symbolNeedsKey(
+  symbol: string,
+  usable: AssetClassUsability | undefined
+): boolean {
+  if (!usable) return false;
+  return isCrypto(symbol) ? !usable.crypto : !usable.stock;
+}
+
+/**
+ * The subset of an event's suggested assets whose asset class has no usable
+ * provider — the symbols a "Backfill & verify" click would silently skip.
+ */
+export function keylessAssets(
+  assets: string[],
+  usable: AssetClassUsability | undefined
+): string[] {
+  return assets.filter((a) => symbolNeedsKey(a, usable));
 }
 
 // ── day model for the selected month ─────────────────────────────────────
@@ -168,11 +205,20 @@ export interface PriceCellInput {
   failedGaps: GapProgressDTO[];
   /** `/horizon` signal (symbol → earliest ISO date). Drives pre-coverage cells. */
   horizon?: Record<string, string>;
+  /**
+   * Asset-class usability from `/market-data-status`. When the symbol's class
+   * has no usable provider, data-shaped verdicts (horizon/failed/action) are
+   * overridden to `nokey` — a missing key is a config problem, not a data one.
+   */
+  usable?: AssetClassUsability;
 }
 
 /**
  * Classify one (symbol, day) price cell from real data.
  *
+ *  - nokey   → the symbol's asset class has no usable provider AND the base
+ *              state claimed a data problem (horizon/failed/action). Present,
+ *              closed and future days keep their honest state.
  *  - future  → day is after today.
  *  - horizon → only if a real horizon date exists for the symbol (gated; today
  *              `horizon` is always undefined so this never fires — no fabricated
@@ -184,6 +230,26 @@ export interface PriceCellInput {
  *  - present → perSymbol >= 100 (or a daily entry with no gap & no deficit).
  */
 export function priceCellState(
+  symbol: string,
+  d: DayCell,
+  input: PriceCellInput
+): PriceCellState {
+  const st = basePriceCellState(symbol, d, input);
+  // A keyless asset class can still SHOW data fetched while a key existed, a
+  // closed market, or the future — but it must never claim "backfill failed",
+  // "missing — fixable (by backfill)" or, worst, "permanently unavailable".
+  // The horizon override also covers floors poisoned by earlier keyless
+  // backfills (NO_DATA feedback raised the cached horizon).
+  if (
+    symbolNeedsKey(symbol, input.usable) &&
+    (st === 'horizon' || st === 'failed' || st === 'action')
+  ) {
+    return 'nokey';
+  }
+  return st;
+}
+
+function basePriceCellState(
   symbol: string,
   d: DayCell,
   input: PriceCellInput
@@ -301,6 +367,7 @@ export interface VerdictInput {
   gaps: DataGap[];
   failedGaps: GapProgressDTO[];
   horizon?: Record<string, string>;
+  usable?: AssetClassUsability;
 }
 
 export function buildVerdict(input: VerdictInput): CoverageVerdict {
@@ -320,8 +387,11 @@ export function buildVerdict(input: VerdictInput): CoverageVerdict {
           gaps: input.gaps,
           failedGaps: input.failedGaps,
           horizon: input.horizon,
+          usable: input.usable,
         });
-        if (st === 'closed' || st === 'future' || st === 'horizon') {
+        if (st === 'closed' || st === 'future' || st === 'horizon' || st === 'nokey') {
+          // `nokey` is set aside, not "missing": without a credentialed provider
+          // there is nothing a backfill click can do — the banner carries the fix.
           setAside++;
           return; // not expected / not backfillable
         }

@@ -22,11 +22,17 @@ import java.util.List;
  *
  * <p>Provider feature-matching mirrors {@code BackfillExecutor.findProvidersForGap}:
  * BACKFILL + asset feature (CRYPTO/STOCK) + data feature (CANDLES for PRICE, NEWS,
- * SOCIAL_MEDIA). The first matching provider's name is reported.</p>
+ * SOCIAL_MEDIA). Among the feature-matching providers, only a <em>usable</em> one
+ * (enabled and credentialed) is named — a keyless install used to label crypto gaps
+ * with "alpaca" (which would be skipped) while kraken/coinbase actually served them,
+ * and news gaps with "Finnhub News" that silently no-opped.</p>
  *
  * <p>Classification precedence:</p>
  * <ol>
- *   <li>{@link GapClassification#NO_SOURCE} — no provider matches.</li>
+ *   <li>{@link GapClassification#NO_SOURCE} — no provider matches the features.</li>
+ *   <li>{@link GapClassification#NO_CREDENTIALED_PROVIDER} — providers match, but none
+ *       is enabled and credentialed. Checked before the horizon: a missing key must
+ *       never masquerade as a permanent data floor.</li>
  *   <li>{@link GapClassification#FUTURE} — the range starts after today (UTC).</li>
  *   <li>{@link GapClassification#BEFORE_HORIZON} — symbol-specific and the whole gap
  *       precedes the symbol's measured provider coverage.</li>
@@ -55,12 +61,17 @@ public class ClassifyGapsService {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
 
         for (MarketDataGap gap : gaps) {
-            String provider = findProviderName(gap);
+            List<MarketDataPort> matching = findMatchingProviders(gap);
+            String provider = firstUsableProviderName(matching);
             int estimatedRecords = estimateRecords(gap);
 
             GapClassification classification;
-            if (provider == null) {
+            if (matching.isEmpty()) {
                 classification = GapClassification.NO_SOURCE;
+            } else if (provider == null) {
+                // Providers could serve this gap, but none holds credentials (or is
+                // switched on). Fixable by configuration — never a data floor.
+                classification = GapClassification.NO_CREDENTIALED_PROVIDER;
             } else if (gap.period().getStart().isAfter(today)) {
                 classification = GapClassification.FUTURE;
             } else if (isBeforeHorizon(gap)) {
@@ -95,12 +106,13 @@ public class ClassifyGapsService {
     }
 
     /**
-     * Name of the first provider that supports this gap, or {@code null} if none.
-     * Mirrors {@code BackfillExecutor.findProvidersForGap} feature-matching.
+     * All providers whose features could serve this gap, regardless of whether they
+     * are enabled or credentialed. Mirrors {@code BackfillExecutor.findProvidersForGap}
+     * feature-matching.
      */
-    private String findProviderName(MarketDataGap gap) {
+    private List<MarketDataPort> findMatchingProviders(MarketDataGap gap) {
         if (marketDataPorts.isEmpty()) {
-            return null;
+            return List.of();
         }
         MarketDataFeature assetFeature = determineAssetFeature(gap);
         MarketDataFeature dataFeature = determineDataFeature(gap);
@@ -109,6 +121,17 @@ public class ClassifyGapsService {
             .filter(p -> p.hasFeature(MarketDataFeature.BACKFILL))
             .filter(p -> assetFeature == null || p.hasFeature(assetFeature))
             .filter(p -> dataFeature == null || p.hasFeature(dataFeature))
+            .toList();
+    }
+
+    /**
+     * Name of the first provider that would <em>actually</em> be used — enabled and
+     * credentialed — or {@code null} when none is. A provider that will be skipped
+     * must never be named on a plan row.
+     */
+    private String firstUsableProviderName(List<MarketDataPort> matching) {
+        return matching.stream()
+            .filter(p -> p.isEnabled() && p.isConfigured())
             .map(MarketDataPort::getProviderName)
             .findFirst()
             .orElse(null);

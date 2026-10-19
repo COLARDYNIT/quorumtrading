@@ -10,6 +10,8 @@ import {
   cellWord,
   presWord,
   isCrypto,
+  symbolNeedsKey,
+  type AssetClassUsability,
   type DayCell,
   type PriceCellState,
   type PresenceCellState,
@@ -25,6 +27,8 @@ interface PriceGridProps {
   failedGaps: GapProgressDTO[];
   /** `/horizon` map (symbol → earliest ISO date). Drives pre-horizon cells + row marker. */
   horizon?: Record<string, string>;
+  /** Asset-class usability from `/market-data-status` — drives `nokey` cells. */
+  usable?: AssetClassUsability;
   /** Symbols just filled by the verify-loop — get the just-filled halo. */
   justFilledSymbols?: string[];
   loading?: boolean;
@@ -103,6 +107,11 @@ const Leg = styled.span`
     background: #17152a;
     background-image: repeating-linear-gradient(45deg, transparent 0 2px, ${HORIZON_LINE} 2px 3px),
       repeating-linear-gradient(-45deg, transparent 0 2px, ${HORIZON_LINE} 2px 3px);
+  }
+  .sw.nokey {
+    background: #1d1712;
+    background-image: repeating-linear-gradient(45deg, transparent 0 2px, rgba(255, 176, 0, 0.35) 2px 3px);
+    border: 1px dashed rgba(255, 176, 0, 0.55);
   }
 `;
 
@@ -190,6 +199,8 @@ const Cell = styled.div<{ $st: PriceCellState; $jf?: boolean }>`
         return 'background: #ff3366; box-shadow: 0 0 8px rgba(255,51,102,0.35);';
       case 'horizon':
         return `background: #17152a; background-image: repeating-linear-gradient(45deg, transparent 0 3px, ${HORIZON_LINE} 3px 4px), repeating-linear-gradient(-45deg, transparent 0 3px, ${HORIZON_LINE} 3px 4px);`;
+      case 'nokey':
+        return 'background: #1d1712; background-image: repeating-linear-gradient(45deg, transparent 0 3px, rgba(255,176,0,0.35) 3px 4px); border: 1px dashed rgba(255,176,0,0.55);';
       default:
         return '';
     }
@@ -285,6 +296,7 @@ export function PriceGrid({
   gaps,
   failedGaps,
   horizon,
+  usable,
   justFilledSymbols,
   loading,
 }: PriceGridProps) {
@@ -298,6 +310,9 @@ export function PriceGrid({
   const justFilled = new Set(justFilledSymbols ?? []);
 
   const monthLabel = selectedMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  // Only advertise the "needs API key" legend when a displayed symbol can hit it.
+  const anyNeedsKey = symbols.some(sym => symbolNeedsKey(sym, usable));
 
   const newsKinds = ([] as Array<{ kind: 'NEWS' | 'SOCIAL'; nm: string }>).concat(
     showNews ? [{ kind: 'NEWS', nm: 'NEWS' }] : [],
@@ -333,6 +348,12 @@ export function PriceGrid({
                 <span className="sw failed" />
                 failed
               </Leg>
+              {anyNeedsKey && (
+                <Leg>
+                  <span className="sw nokey" />
+                  needs API key
+                </Leg>
+              )}
             </Legend>
           </Toolbar>
 
@@ -359,6 +380,7 @@ export function PriceGrid({
                   gaps={gaps}
                   failedGaps={failedGaps}
                   horizon={horizon}
+                  usable={usable}
                   jf={justFilled.has(sym)}
                 />
               );
@@ -418,6 +440,7 @@ function RowHeadFragment({
   gaps,
   failedGaps,
   horizon,
+  usable,
   jf,
 }: {
   sym: string;
@@ -427,26 +450,37 @@ function RowHeadFragment({
   gaps: DataGap[];
   failedGaps: GapProgressDTO[];
   horizon?: Record<string, string>;
+  usable?: AssetClassUsability;
   jf: boolean;
 }) {
   const earliest = horizon?.[sym];
   const locked = !!earliest;
+  const needsKey = symbolNeedsKey(sym, usable);
   return (
     <>
       <RowHead $locked={locked}>
         <span className="sym">{sym}</span>
         <span className={`mkt ${crypto ? 'cls-cr' : 'cls-eq'}`}>{crypto ? '24/7' : 'exchange'}</span>
-        <span className="horizon-mark">
-          coverage from{' '}
-          {earliest ? (
-            format(parseISO(earliest.slice(0, 10)), 'MMM yyyy')
-          ) : (
-            <span className="pending-dash">—</span>
-          )}
-        </span>
+        {needsKey ? (
+          // Any cached "coverage from" date is untrustworthy without a usable
+          // provider (it may be a floor poisoned by a keyless backfill) — say
+          // the actual blocker instead.
+          <span className="horizon-mark" style={{ color: '#ffb000' }}>
+            needs data key
+          </span>
+        ) : (
+          <span className="horizon-mark">
+            coverage from{' '}
+            {earliest ? (
+              format(parseISO(earliest.slice(0, 10)), 'MMM yyyy')
+            ) : (
+              <span className="pending-dash">—</span>
+            )}
+          </span>
+        )}
       </RowHead>
       {days.map(d => {
-        const st = priceCellState(sym, d, { daily, gaps, failedGaps, horizon });
+        const st = priceCellState(sym, d, { daily, gaps, failedGaps, horizon, usable });
         return (
           <Cell key={`${sym}${d.day}`} $st={st} $jf={jf && st === 'present'} title={`${sym} · ${d.iso} · ${cellWord(st)}`} />
         );

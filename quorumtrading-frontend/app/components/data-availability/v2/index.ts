@@ -5,5 +5,6 @@ export { PriceGrid } from './PriceGrid';
 export { BackfillColumn } from './BackfillColumn';
 export { EventRows } from './EventRows';
 export { VerifyBanner } from './VerifyBanner';
+export { ProviderStatusBanner } from './ProviderStatusBanner';
 export { FilterRail } from './FilterRail';
 export * from './coverageDerive';

@@ -68,12 +68,17 @@ export interface DataGap {
   to: string;
   /**
    * Actionability classification:
-   * ACTIONABLE | FUTURE | NO_SOURCE | BEFORE_HORIZON.
+   * ACTIONABLE | FUTURE | NO_SOURCE | NO_CREDENTIALED_PROVIDER | BEFORE_HORIZON.
+   * NO_CREDENTIALED_PROVIDER means providers exist for this gap but none holds
+   * credentials — fixable with an API key, never a data floor.
    * Optional — absent on older responses, in which case the UI falls back to a
    * local past-date heuristic.
    */
   classification?: string;
-  /** Provider that would fill this gap, or null if no source supports it. */
+  /**
+   * Provider that would ACTUALLY fill this gap (enabled + credentialed), or null
+   * when none is usable — the backend never names a provider it would skip.
+   */
   provider?: string | null;
   /** Estimated number of records a backfill would produce for this gap. */
   estimatedRecords?: number;
@@ -164,6 +169,42 @@ export interface DataHorizonEntry {
 export interface DataHorizonResponse {
   /** One entry per (symbol, dataType) requested. */
   horizons: DataHorizonEntry[];
+}
+
+/**
+ * One market-data provider's state.
+ * Matches backend MarketDataStatusResponse.Provider.
+ */
+export interface MarketDataProviderStatus {
+  /** Provider name as it appears in backfill messages (e.g. "alpaca", "kraken"). */
+  name: string;
+  /** Switched on for this deployment. */
+  enabled: boolean;
+  /** Holds whatever credentials it needs (always true for keyless providers). */
+  credentialed: boolean;
+  /** Enabled AND credentialed — could serve a request right now. */
+  usable: boolean;
+  /** Asset classes it advertises ("CRYPTO" | "STOCK"). */
+  assetClasses: string[];
+  /** What its current state means for the operator. */
+  detail: string;
+}
+
+/**
+ * Deployment market-data provider status — which providers exist and whether
+ * stocks / crypto have any usable provider at all.
+ * Matches backend MarketDataStatusResponse.
+ * GET /api/v1/data-availability/market-data-status
+ */
+export interface MarketDataStatusResponse {
+  /** At least one enabled, credentialed provider can serve crypto candles. */
+  cryptoUsable: boolean;
+  /** At least one enabled, credentialed provider can serve stock candles. */
+  stockUsable: boolean;
+  /** Every discovered candle-serving provider, enabled or not. */
+  providers: MarketDataProviderStatus[];
+  /** One-line human summary of what works and what is missing. */
+  hint: string;
 }
 
 // ===== WebSocket Message Types =====
