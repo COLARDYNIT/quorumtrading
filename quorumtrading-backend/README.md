@@ -246,7 +246,7 @@ OPENROUTER_API_KEY=sk-or-v1-...
 # Model selection per trading mode
 quorumtrading.llm.defaults.backtesting=mistralai/mistral-small-3.2-24b-instruct
 quorumtrading.llm.defaults.paper-trading=meta-llama/llama-4-scout
-quorumtrading.llm.defaults.live-trading=anthropic/claude-sonnet-4.6
+quorumtrading.llm.defaults.live-trading=anthropic/claude-sonnet-5.5
 quorumtrading.llm.defaults.research=mistralai/mistral-small-3.2-24b-instruct
 
 # Model fallback chain when the requested model is unavailable

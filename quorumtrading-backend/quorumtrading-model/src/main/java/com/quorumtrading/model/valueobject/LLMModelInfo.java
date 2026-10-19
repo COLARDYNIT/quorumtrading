@@ -7,7 +7,7 @@ import java.util.List;
  * Value object representing LLM model information including capabilities and pricing.
  * This provides all information needed to make informed model selection decisions.
  *
- * @param id               Unique model identifier (e.g., "openai/gpt-4o", "anthropic/claude-3.5-sonnet")
+ * @param id               Unique model identifier (e.g., "openai/gpt-4o", "anthropic/claude-sonnet-5.5")
  * @param name             Human-readable display name (e.g., "GPT-4o", "Claude 3.5 Sonnet")
  * @param description      Model description and capabilities overview
  * @param contextLength    Maximum context window in tokens

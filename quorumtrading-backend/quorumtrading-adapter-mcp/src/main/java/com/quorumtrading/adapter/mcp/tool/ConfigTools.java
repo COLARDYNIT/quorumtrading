@@ -91,7 +91,7 @@ public class ConfigTools extends McpToolBase {
         + "Pass an empty string to clear a preference and revert to system default. "
         + "Use agentOverrides for per-agent model overrides (JSON object with keys like 'BACKTESTING_TECHNICAL').")
     public ToolResponse updateModelPreferences(
-        @ToolArg(description = "Model ID for LIVE_TRADING (e.g. 'anthropic/claude-sonnet-4.6'), or empty string to clear")
+        @ToolArg(description = "Model ID for LIVE_TRADING (e.g. 'anthropic/claude-sonnet-5.5'), or empty string to clear")
             Optional<String> liveTradingModel,
         @ToolArg(description = "Model ID for PAPER_TRADING, or empty string to clear")
             Optional<String> paperTradingModel,
@@ -101,7 +101,7 @@ public class ConfigTools extends McpToolBase {
             Optional<String> researchModel,
         @ToolArg(description = "Model ID for CHAT (AI agent), or empty string to clear")
             Optional<String> chatModel,
-        @ToolArg(description = "Per-agent model overrides as JSON, e.g. '{\"BACKTESTING_TECHNICAL\": \"google/gemini-2.5-flash\", \"BACKTESTING_SENTIMENT\": \"anthropic/claude-sonnet-4.6\"}'. "
+        @ToolArg(description = "Per-agent model overrides as JSON, e.g. '{\"BACKTESTING_TECHNICAL\": \"google/gemini-2.5-flash\", \"BACKTESTING_SENTIMENT\": \"anthropic/claude-sonnet-5.5\"}'. "
             + "Keys are CONTEXT_ROLE (e.g. BACKTESTING_TECHNICAL, LIVE_TRADING_ORCHESTRATOR). Pass empty string as value to clear.")
             Optional<String> agentOverrides
     ) {

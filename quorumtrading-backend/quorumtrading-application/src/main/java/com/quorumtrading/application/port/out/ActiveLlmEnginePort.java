@@ -8,7 +8,7 @@ import java.util.Optional;
  * Which LLM engine will actually serve calls right now.
  *
  * <p>Model defaults are meaningless without this. A single flat default set hands
- * {@code llama3.2} to OpenRouter and {@code anthropic/claude-sonnet-4.6} to an Ollama server that
+ * {@code llama3.2} to OpenRouter and {@code anthropic/claude-sonnet-5.5} to an Ollama server that
  * has never heard of it — so "the system default" is only well-defined once scoped to an engine.
  * Every consumer of {@link SystemModelDefaultsPort}'s engine-scoped lookups gets the engine from
  * here.</p>

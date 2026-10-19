@@ -987,7 +987,7 @@ public final class GuideContent {
           convert to HOLD — keep `cash × (1 − reserve) × limit` above it or nothing ever trades
         - `position_cooldown:` — skip consensus after BUY/SELL (e.g., `14d`, `2w`, `1h`)
         - `llm_model:` — pin a specific model. Ids must come from the engine you actually run:
-          OpenRouter ids (e.g., `anthropic/claude-3.5-sonnet`) on the hosted edition, the local
+          OpenRouter ids (e.g., `anthropic/claude-sonnet-5.5`) on the hosted edition, the local
           server's own ids (e.g., `llama3.2`, whatever `get_available_models` lists) on a local
           engine — or omit it and the engine's default is used
         - `llm_models:` — per-agent model overrides (`TECHNICAL: "model-id"`)

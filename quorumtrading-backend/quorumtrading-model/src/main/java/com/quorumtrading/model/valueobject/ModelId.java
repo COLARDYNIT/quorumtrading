@@ -2,7 +2,7 @@ package com.quorumtrading.model.valueobject;
 
 /**
  * Value object representing an LLM model identifier.
- * Format is typically "provider/model-name" (e.g., "anthropic/claude-3.5-sonnet").
+ * Format is typically "provider/model-name" (e.g., "anthropic/claude-sonnet-5.5").
  */
 public record ModelId(String value) {
 

@@ -169,21 +169,38 @@ public class ModelTierRegistry {
             entry(TradingContext.CHAT, ModelTier.PROVEN, "Reliable chat at $0.38/$0.57 per million tokens")
         ));
 
-        // Claude Opus 4.6: Flagship premium model
-        map.put("anthropic/claude-opus-4.6", contextMap(
+        // Claude Opus 5.5: Flagship premium model ($4/$20 per M on OpenRouter).
+        // Successor to Opus 4.6; inherits its tiers, not separately re-benchmarked.
+        map.put("anthropic/claude-opus-5.5", contextMap(
             entry(TradingContext.BACKTESTING, ModelTier.PROVEN, "Flagship premium model"),
             entry(TradingContext.RESEARCH, ModelTier.PROVEN, "Highest reasoning quality"),
             entry(TradingContext.LIVE_TRADING, ModelTier.RECOMMENDED, "Flagship for real money"),
             entry(TradingContext.CHAT, ModelTier.PROVEN, "Flagship chat — premium pricing")
         ));
 
-        // Claude Sonnet 4.5: Premium quality
-        map.put("anthropic/claude-sonnet-4.6", contextMap(
-            entry(TradingContext.BACKTESTING, ModelTier.PROVEN, "Premium quality at $0.038/decision"),
+        // Claude Sonnet 5.5: Premium quality ($2/$10 per M on OpenRouter).
+        // Successor to Sonnet 4.6; inherits its tiers, not separately re-benchmarked.
+        map.put("anthropic/claude-sonnet-5.5", contextMap(
+            entry(TradingContext.BACKTESTING, ModelTier.PROVEN, "Premium quality at ~$0.025/decision (4.6's $0.038 scaled to 5.5 pricing)"),
             entry(TradingContext.RESEARCH, ModelTier.PROVEN, "Strong reasoning for research"),
             entry(TradingContext.PAPER_TRADING, ModelTier.PROVEN, "Premium quality for paper trading"),
             entry(TradingContext.LIVE_TRADING, ModelTier.RECOMMENDED, "Best reasoning quality for real money decisions"),
             entry(TradingContext.CHAT, ModelTier.PROVEN, "Premium chat quality")
+        ));
+
+        // Previous Claude generation: kept so existing pins stay PROVEN, but no longer RECOMMENDED.
+        map.put("anthropic/claude-opus-4.6", contextMap(
+            entry(TradingContext.BACKTESTING, ModelTier.PROVEN, "Previous generation — superseded by Claude Opus 5.5"),
+            entry(TradingContext.RESEARCH, ModelTier.PROVEN, "Previous generation — superseded by Claude Opus 5.5"),
+            entry(TradingContext.LIVE_TRADING, ModelTier.PROVEN, "Previous generation — superseded by Claude Opus 5.5"),
+            entry(TradingContext.CHAT, ModelTier.PROVEN, "Previous generation — superseded by Claude Opus 5.5")
+        ));
+        map.put("anthropic/claude-sonnet-4.6", contextMap(
+            entry(TradingContext.BACKTESTING, ModelTier.PROVEN, "Previous generation — superseded by Claude Sonnet 5.5"),
+            entry(TradingContext.RESEARCH, ModelTier.PROVEN, "Previous generation — superseded by Claude Sonnet 5.5"),
+            entry(TradingContext.PAPER_TRADING, ModelTier.PROVEN, "Previous generation — superseded by Claude Sonnet 5.5"),
+            entry(TradingContext.LIVE_TRADING, ModelTier.PROVEN, "Previous generation — superseded by Claude Sonnet 5.5"),
+            entry(TradingContext.CHAT, ModelTier.PROVEN, "Previous generation — superseded by Claude Sonnet 5.5")
         ));
 
         // Gemini 2.5 Flash: Battle-tested
@@ -244,9 +261,14 @@ public class ModelTierRegistry {
             entry(TradingContext.CHAT, ModelTier.PROVEN, "Strong chat at $0.38/$3.00 per million tokens")
         ));
 
-        // Claude Haiku 4.5: Premium quality, higher cost
+        // Claude Haiku 5.5: successor to Haiku 4.5, a tenth of its price ($0.10/$0.50 per M on OpenRouter)
+        map.put("anthropic/claude-haiku-5.5", contextMap(
+            entry(TradingContext.CHAT, ModelTier.PROVEN, "Premium chat quality at $0.15/$0.75 per million tokens")
+        ));
+
+        // Claude Haiku 4.5: previous generation, kept so existing pins stay PROVEN
         map.put("anthropic/claude-haiku-4.5", contextMap(
-            entry(TradingContext.CHAT, ModelTier.PROVEN, "Premium chat quality at $1.50/$7.50 per million tokens")
+            entry(TradingContext.CHAT, ModelTier.PROVEN, "Previous generation — superseded by Claude Haiku 5.5")
         ));
 
         // Gemini 2.5 Pro: Only Google model passing chat test

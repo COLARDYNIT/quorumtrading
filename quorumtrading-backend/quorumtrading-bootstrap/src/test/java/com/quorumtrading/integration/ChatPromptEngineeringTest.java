@@ -79,9 +79,9 @@ class ChatPromptEngineeringTest {
 
     // --- Claude models (expensive, tagged separately) ---
     static final List<String> CLAUDE_MODELS = List.of(
-        "anthropic/claude-opus-4.6",
-        "anthropic/claude-sonnet-4.6",
-        "anthropic/claude-haiku-4.5"
+        "anthropic/claude-opus-5.5",
+        "anthropic/claude-sonnet-5.5",
+        "anthropic/claude-haiku-5.5"
     );
 
     // --- Hero flow constants ---

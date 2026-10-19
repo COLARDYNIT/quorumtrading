@@ -856,7 +856,7 @@ public class StrategyConfigParser {
      * <pre>
      * llm_models:
      *   TECHNICAL: "google/gemini-2.5-flash"
-     *   SENTIMENT: "anthropic/claude-sonnet-4.6"
+     *   SENTIMENT: "anthropic/claude-sonnet-5.5"
      * </pre>
      */
     @SuppressWarnings("unchecked")

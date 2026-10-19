@@ -105,7 +105,7 @@ public class CreateStrategyService implements CreateStrategyUseCase {
     static String unknownModelMessage(String llmModel) {
         return "Unknown LLM model: " + llmModel + ". The active LLM engine does not advertise this id. "
                 + "List valid ids with get_available_models (models come from the engine you selected — "
-                + "OpenRouter ids like 'anthropic/claude-3.5-sonnet' only exist there; a local server "
+                + "OpenRouter ids like 'anthropic/claude-sonnet-5.5' only exist there; a local server "
                 + "advertises its own, e.g. 'llama3.2'). On a local engine you can also omit llm_model "
                 + "entirely (the server's default is used) or pin one process-wide with QT_LLM_LOCALHTTP_MODEL.";
     }
