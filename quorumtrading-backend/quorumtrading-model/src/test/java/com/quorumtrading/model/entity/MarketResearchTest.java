@@ -208,4 +208,33 @@ class MarketResearchTest {
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("OwnerId cannot be null");
     }
+    @Test
+    void deferNextRunUntil_movesTheNextRunForward() {
+        MarketResearch research = new MarketResearch("Daily cap", "# x", Set.of(new Symbol("BTC", InvestmentType.CRYPTO)),
+            new ResearchInterval(1, ResearchInterval.Unit.DAYS), false, null, TEST_OWNER);
+        Instant later = research.getNextScheduledRun().plus(Duration.ofDays(3));
+
+        research.deferNextRunUntil(later);
+
+        assertThat(research.getNextScheduledRun()).isEqualTo(later);
+    }
+
+    @Test
+    void deferNextRunUntil_neverPullsTheNextRunEarlier() {
+        MarketResearch research = new MarketResearch("Daily cap", "# x", Set.of(new Symbol("BTC", InvestmentType.CRYPTO)),
+            new ResearchInterval(7, ResearchInterval.Unit.DAYS), false, null, TEST_OWNER);
+        Instant scheduled = research.getNextScheduledRun();
+
+        research.deferNextRunUntil(scheduled.minus(Duration.ofDays(1)));
+
+        assertThat(research.getNextScheduledRun()).isEqualTo(scheduled);
+    }
+
+    @Test
+    void deferNextRunUntil_rejectsNull() {
+        MarketResearch research = new MarketResearch("Daily cap", "# x", Set.of(new Symbol("BTC", InvestmentType.CRYPTO)),
+            new ResearchInterval(7, ResearchInterval.Unit.DAYS), false, null, TEST_OWNER);
+
+        assertThatThrownBy(() -> research.deferNextRunUntil(null)).isInstanceOf(NullPointerException.class);
+    }
 }

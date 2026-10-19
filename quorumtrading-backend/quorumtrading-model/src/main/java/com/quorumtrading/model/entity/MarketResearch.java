@@ -106,6 +106,19 @@ public class MarketResearch {
     }
 
     /**
+     * Push the next scheduled run out to {@code notBefore}, e.g. when a daily spend cap refuses the
+     * run and the cap only refreshes at the next UTC day. Never pulls the run earlier.
+     *
+     * @param notBefore the earliest instant the research may run again
+     */
+    public void deferNextRunUntil(Instant notBefore) {
+        Objects.requireNonNull(notBefore, "notBefore cannot be null");
+        if (nextScheduledRun == null || notBefore.isAfter(nextScheduledRun)) {
+            this.nextScheduledRun = notBefore;
+        }
+    }
+
+    /**
      * Update the name of this research.
      *
      * @param name the new name (cannot be blank)

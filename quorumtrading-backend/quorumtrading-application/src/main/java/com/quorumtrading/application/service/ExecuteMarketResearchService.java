@@ -2,6 +2,8 @@ package com.quorumtrading.application.service;
 
 import com.quorumtrading.application.event.ResearchExecutionCompleted;
 import com.quorumtrading.application.event.ResearchExecutionStartedEvent;
+import com.quorumtrading.application.exception.BudgetDepletedException;
+import com.quorumtrading.application.exception.DailySpendLimitExceededException;
 import com.quorumtrading.application.port.out.EventPublisher;
 import com.quorumtrading.application.port.out.MarketResearchRepository;
 import com.quorumtrading.application.usecase.ExecuteMarketResearchUseCase;
@@ -9,11 +11,15 @@ import com.quorumtrading.application.usecase.budget.RecordLLMUsageUseCase;
 import com.quorumtrading.model.entity.MarketResearch;
 import com.quorumtrading.model.entity.ResearchExecution;
 import com.quorumtrading.model.entity.UserBudget;
+import com.quorumtrading.model.valueobject.ExternalPauseReason;
 import com.quorumtrading.model.valueobject.TradingContext;
 import com.quorumtrading.model.valueobject.UserId;
 import org.jboss.logging.Logger;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -79,7 +85,7 @@ public class ExecuteMarketResearchService implements ExecuteMarketResearchUseCas
         // 2b. Budget pre-check: Fail fast if user's AI budget is depleted
         // This prevents initiating LLM calls that would incur costs when user cannot pay
         if (research.getOwnerId() != null) {
-            recordLLMUsageUseCase.requireAvailableBudget(research.getOwnerId());
+            requireBudget(research);
             LOG.debugf("Budget pre-check passed for user %s", research.getOwnerId());
         }
 
@@ -97,6 +103,37 @@ public class ExecuteMarketResearchService implements ExecuteMarketResearchUseCas
 
         // 6. Return execution ID immediately (caller doesn't wait for completion)
         return executionId;
+    }
+
+    /**
+     * Budget pre-check that leaves the research in a state the scheduler will not retry.
+     *
+     * <p>A refusal used to leave the research ACTIVE with its next run in the past, so the hourly
+     * scheduler picked it up and failed it again every tick. A depleted lifetime budget only comes
+     * back with a top-up, so the research is paused with the named reason BUDGET_DEPLETED (ADR 0004)
+     * and {@code BudgetEventListener.onBudgetRestored} resumes it. A daily cap refreshes at 00:00 UTC
+     * (ADR 0003), so the next run is deferred to then instead. Either way the exception is rethrown:
+     * the caller still learns the run was refused.</p>
+     */
+    private void requireBudget(MarketResearch research) {
+        try {
+            recordLLMUsageUseCase.requireAvailableBudget(research.getOwnerId());
+        } catch (BudgetDepletedException e) {
+            if (!research.isPausedForExternalReason()) {
+                research.pauseForExternalReason(ExternalPauseReason.BUDGET_DEPLETED);
+                repository.save(research);
+                LOG.warnf("Paused market research %s for user %s: AI budget depleted; it resumes when the budget is restored",
+                    research.getId(), research.getOwnerId());
+            }
+            throw e;
+        } catch (DailySpendLimitExceededException e) {
+            Instant nextUtcDay = LocalDate.now(ZoneOffset.UTC).plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+            research.deferNextRunUntil(nextUtcDay);
+            repository.save(research);
+            LOG.infof("Deferred market research %s for user %s to %s: daily AI spend limit reached",
+                research.getId(), research.getOwnerId(), nextUtcDay);
+            throw e;
+        }
     }
 
     /**
