@@ -242,6 +242,15 @@ Model selection works in two layers:
 
 Avoid `:free` tier models — the config notes they have a history of 100% parse failures.
 
+### Temperature is ignored on the Claude 5.5 models
+
+The Anthropic 5.5 slugs on OpenRouter do not list `temperature` or `top_p` in
+`supported_parameters`. `OpenRouterAdapter` and `LocalHttpLLMAdapter` still send `temperature`;
+OpenRouter drops unsupported parameters because we do not set `provider.require_parameters`, so the
+request does not fail. It does mean every temperature setting (for example
+`quorumtrading.picker.llm.temperature`) has no effect when the resolved model is a 5.5 Claude
+model. Other providers in the chain still honour it, which is why the adapters keep sending it.
+
 ## LLM Provider Abstraction
 
 - `LLMPort` is the output port; its primary method is `queryWithUsage(prompt, config)` (`query(prompt, config)` is a backward-compatibility convenience default)

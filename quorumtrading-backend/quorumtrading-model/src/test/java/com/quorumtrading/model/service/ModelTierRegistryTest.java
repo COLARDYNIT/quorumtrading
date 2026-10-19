@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import java.math.BigDecimal;
@@ -136,9 +137,9 @@ class ModelTierRegistryTest {
         }
 
         @Test
-        @DisplayName("Claude Opus 4.6 should be RECOMMENDED for LIVE_TRADING")
+        @DisplayName("Claude Opus 5.5 should be RECOMMENDED for LIVE_TRADING")
         void claudeOpusRecommendedForLiveTrading() {
-            LLMModelInfo model = model("anthropic/claude-opus-4.6", "anthropic", new BigDecimal("15.0"));
+            LLMModelInfo model = model("anthropic/claude-opus-5.5", "anthropic", new BigDecimal("4.0"));
 
             ModelEvaluation eval = registry.evaluate(model, TradingContext.LIVE_TRADING);
 
@@ -146,18 +147,18 @@ class ModelTierRegistryTest {
         }
 
         @Test
-        @DisplayName("Claude Opus 4.6 should be PROVEN for BACKTESTING and CHAT")
+        @DisplayName("Claude Opus 5.5 should be PROVEN for BACKTESTING and CHAT")
         void claudeOpusProvenForBacktestingAndChat() {
-            LLMModelInfo model = model("anthropic/claude-opus-4.6", "anthropic", new BigDecimal("15.0"));
+            LLMModelInfo model = model("anthropic/claude-opus-5.5", "anthropic", new BigDecimal("4.0"));
 
             assertEquals(ModelTier.PROVEN, registry.evaluate(model, TradingContext.BACKTESTING).tier());
             assertEquals(ModelTier.PROVEN, registry.evaluate(model, TradingContext.CHAT).tier());
         }
 
         @Test
-        @DisplayName("Claude Sonnet 4.5 should be RECOMMENDED for LIVE_TRADING")
+        @DisplayName("Claude Sonnet 5.5 should be RECOMMENDED for LIVE_TRADING")
         void claudeSonnetRecommendedForLiveTrading() {
-            LLMModelInfo model = model("anthropic/claude-sonnet-4.6", "anthropic", new BigDecimal("3.0"));
+            LLMModelInfo model = model("anthropic/claude-sonnet-5.5", "anthropic", new BigDecimal("2.0"));
 
             ModelEvaluation eval = registry.evaluate(model, TradingContext.LIVE_TRADING);
 
@@ -165,13 +166,31 @@ class ModelTierRegistryTest {
         }
 
         @Test
-        @DisplayName("Claude Sonnet 4.5 should be PROVEN for BACKTESTING")
+        @DisplayName("Claude Sonnet 5.5 should be PROVEN for BACKTESTING")
         void claudeSonnetProvenForBacktesting() {
-            LLMModelInfo model = model("anthropic/claude-sonnet-4.6", "anthropic", new BigDecimal("3.0"));
+            LLMModelInfo model = model("anthropic/claude-sonnet-5.5", "anthropic", new BigDecimal("2.0"));
 
             ModelEvaluation eval = registry.evaluate(model, TradingContext.BACKTESTING);
 
             assertEquals(ModelTier.PROVEN, eval.tier());
+        }
+
+        @Test
+        @DisplayName("Claude Haiku 5.5 should be PROVEN for CHAT")
+        void claudeHaikuProvenForChat() {
+            LLMModelInfo model = model("anthropic/claude-haiku-5.5", "anthropic", new BigDecimal("0.10"));
+
+            assertEquals(ModelTier.PROVEN, registry.evaluate(model, TradingContext.CHAT).tier());
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"anthropic/claude-opus-4.6", "anthropic/claude-sonnet-4.6"})
+        @DisplayName("Previous-generation Claude pins stay PROVEN but are no longer RECOMMENDED for LIVE_TRADING")
+        void previousGenerationClaudeDemotedNotDropped(String id) {
+            LLMModelInfo model = model(id, "anthropic", new BigDecimal("3.0"));
+
+            assertEquals(ModelTier.PROVEN, registry.evaluate(model, TradingContext.LIVE_TRADING).tier());
+            assertEquals(ModelTier.PROVEN, registry.evaluate(model, TradingContext.BACKTESTING).tier());
         }
 
         @Test
@@ -422,7 +441,7 @@ class ModelTierRegistryTest {
             List<LLMModelInfo> knownModels = List.of(
                 model("mistralai/mistral-small-3.2-24b-instruct", "mistralai", new BigDecimal("0.1")),
                 model("meta-llama/llama-4-scout", "meta-llama", new BigDecimal("0.08")),
-                model("anthropic/claude-sonnet-4.6", "anthropic", new BigDecimal("3.0")),
+                model("anthropic/claude-sonnet-5.5", "anthropic", new BigDecimal("2.0")),
                 model("xiaomi/mimo-v2-flash", "xiaomi", new BigDecimal("0.14"))
             );
 
@@ -506,7 +525,7 @@ class ModelTierRegistryTest {
                 new ChatModel("x-ai/grok-4-fast", "x-ai", new BigDecimal("0.20")),
                 new ChatModel("deepseek/deepseek-v3.2", "deepseek", new BigDecimal("0.25")),
                 new ChatModel("openai/gpt-5-mini", "openai", new BigDecimal("0.25")),
-                new ChatModel("anthropic/claude-haiku-4.5", "anthropic", new BigDecimal("1.00")),
+                new ChatModel("anthropic/claude-haiku-5.5", "anthropic", new BigDecimal("0.10")),
                 new ChatModel("google/gemini-2.5-pro", "google", new BigDecimal("1.25"))
             );
 

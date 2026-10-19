@@ -17,10 +17,10 @@ public record UpdateModelPreferencesRequest(
     @Schema(description = "Preferred model for backtesting", example = "openai/gpt-4o-mini")
     String backtesting,
 
-    @Schema(description = "Preferred model for paper trading", example = "anthropic/claude-3.5-sonnet")
+    @Schema(description = "Preferred model for paper trading", example = "anthropic/claude-sonnet-5.5")
     String paperTrading,
 
-    @Schema(description = "Preferred model for live trading", example = "anthropic/claude-3.5-sonnet")
+    @Schema(description = "Preferred model for live trading", example = "anthropic/claude-sonnet-5.5")
     String liveTrading,
 
     @Schema(description = "Preferred model for AI agent chat", example = "google/gemini-2.5-flash")

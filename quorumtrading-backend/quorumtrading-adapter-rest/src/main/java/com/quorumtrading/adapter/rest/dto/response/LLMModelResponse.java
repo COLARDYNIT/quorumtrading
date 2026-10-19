@@ -15,7 +15,7 @@ import java.util.List;
  */
 @Schema(description = "LLM model information with capabilities and pricing")
 public record LLMModelResponse(
-    @Schema(description = "Unique model identifier", example = "anthropic/claude-3.5-sonnet")
+    @Schema(description = "Unique model identifier", example = "anthropic/claude-sonnet-5.5")
     String id,
 
     @Schema(description = "Human-readable display name", example = "Claude 3.5 Sonnet")

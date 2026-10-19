@@ -160,7 +160,7 @@ reserve_cash_percentage: 0.2
 # llm_model: "mistralai/mistral-small-3.2-24b-instruct"  # Optional: pin all agents to one model
 # llm_models:                # Optional: per-agent model overrides (takes precedence over llm_model)
 #   TECHNICAL: "google/gemini-2.5-flash"
-#   SENTIMENT: "anthropic/claude-sonnet-4.6"
+#   SENTIMENT: "anthropic/claude-sonnet-5.5"
 ---
 
 # Strategic Trading Guidance

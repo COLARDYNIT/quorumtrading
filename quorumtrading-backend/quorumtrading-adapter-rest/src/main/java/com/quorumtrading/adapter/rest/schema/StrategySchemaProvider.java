@@ -118,7 +118,7 @@ public class StrategySchemaProvider {
 
         // LLM model override (optional)
         fields.put("llm_model", FieldDefinition.string(
-            "Pin a specific LLM model for this strategy (e.g., 'anthropic/claude-3.5-sonnet'). " +
+            "Pin a specific LLM model for this strategy (e.g., 'anthropic/claude-sonnet-5.5'). " +
             "When set, disables the fallback chain - if this model fails, consensus fails.",
             null,
             false
