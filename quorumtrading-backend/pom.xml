@@ -55,7 +55,7 @@
         <assertj.version>3.27.7</assertj.version>
 
         <compiler-plugin.version>3.16.0</compiler-plugin.version>
-        <surefire-plugin.version>3.6.0</surefire-plugin.version>
+        <surefire-plugin.version>3.6.1</surefire-plugin.version>
 
         <!-- Set to false only to regenerate pmd-baseline.properties; see the maven-pmd-plugin
              configuration below and scripts/generate-pmd-baseline.sh. -->
