@@ -50,12 +50,12 @@
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.version>3.40.1</quarkus.platform.version>
 
-        <jandex.version>3.6.0</jandex.version>
+        <jandex.version>3.6.1</jandex.version>
         <wiremock.version>3.13.2</wiremock.version>
         <assertj.version>3.27.7</assertj.version>
 
         <compiler-plugin.version>3.16.0</compiler-plugin.version>
-        <surefire-plugin.version>3.6.0</surefire-plugin.version>
+        <surefire-plugin.version>3.6.1</surefire-plugin.version>
 
         <!-- Set to false only to regenerate pmd-baseline.properties; see the maven-pmd-plugin
              configuration below and scripts/generate-pmd-baseline.sh. -->
@@ -261,7 +261,7 @@
                 <plugin>
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
-                    <version>0.8.15</version>
+                    <version>0.8.16</version>
                 </plugin>
             </plugins>
         </pluginManagement>
